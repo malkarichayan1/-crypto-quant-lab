@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+from hedgefund.data.cache import DEFAULT_CACHE_DIR, read_symbol
 
 FIELDS = ("open", "high", "low", "close", "volume")
 
@@ -43,3 +46,23 @@ class PricePanel:
     @classmethod
     def from_field_frames(cls, frames: dict[str, pd.DataFrame]) -> "PricePanel":
         return cls(**{f: frames[f] for f in FIELDS})
+
+
+def load_panel(
+    symbols: list[str],
+    start: date,
+    end: date,
+    cache_dir: Path = DEFAULT_CACHE_DIR,
+) -> PricePanel:
+    """Assemble cached per-symbol frames into one aligned PricePanel.
+
+    The union of all symbols' dates forms the index; a symbol missing a date
+    (e.g. pre-listing) stays NaN and is therefore not tradable on that bar.
+    """
+    frames = {sym: read_symbol(sym, cache_dir=cache_dir) for sym in symbols}
+    field_frames: dict[str, pd.DataFrame] = {}
+    for fld in FIELDS:
+        wide = pd.DataFrame({sym: frames[sym][fld] for sym in symbols}).sort_index()
+        mask = (wide.index >= pd.Timestamp(start)) & (wide.index <= pd.Timestamp(end))
+        field_frames[fld] = wide.loc[mask]
+    return PricePanel.from_field_frames(field_frames)
