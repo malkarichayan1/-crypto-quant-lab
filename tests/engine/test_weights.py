@@ -1,3 +1,4 @@
+import pytest
 import pandas as pd
 
 from hedgefund.dsl.spec import (
@@ -28,6 +29,26 @@ def test_cross_sectional_long_short():
     w = target_weights(sel, sizing, {"m": indicator_row}, tradable, prev_state={})
     assert w["BBB"] == 0.5
     assert w["DDD"] == -0.5
+
+
+def test_unsupported_sizing_scheme_raises():
+    indicator_row = pd.Series({"AAA": 0.2, "BBB": 0.5})
+    sel = CrossSectionalSelection(mode="cross_sectional", rank_by="m", long_top=1, short_bottom=0)
+    sizing = Sizing(scheme="inverse_vol", vol_indicator_id="v")
+    with pytest.raises(NotImplementedError, match="equal_weight"):
+        target_weights(sel, sizing, {"m": indicator_row}, ["AAA", "BBB"], prev_state={})
+
+
+def test_cross_sectional_overlap_longs_take_priority_no_flip():
+    indicator_row = pd.Series({"AAA": 0.2, "BBB": 0.5})
+    tradable = ["AAA", "BBB"]
+    sel = CrossSectionalSelection(mode="cross_sectional", rank_by="m", long_top=2, short_bottom=2)
+    sizing = Sizing(scheme="equal_weight", gross_leverage=1.0)
+    w = target_weights(sel, sizing, {"m": indicator_row}, tradable, prev_state={})
+    # both selected as longs (no symbol left to short); neither may be negative
+    assert w["AAA"] == 0.5
+    assert w["BBB"] == 0.5
+    assert all(v > 0 for v in w.values())
 
 
 def test_time_series_entry_then_hold_until_exit():

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 from hedgefund.engine.portfolio import Portfolio
 
 _EPS = 1e-9
@@ -24,7 +26,7 @@ def rebalance_to_weights(
     symbols = set(target_weights) | set(portfolio.positions)
     for sym in symbols:
         price = fill_prices.get(sym)
-        if price is None or price <= 0:
+        if price is None or not math.isfinite(price) or price <= 0:
             continue
         target_units = target_weights.get(sym, 0.0) * portfolio_value / price
         current_units = portfolio.positions.get(sym, 0.0)

@@ -32,6 +32,10 @@ def target_weights(
 ) -> dict[str, float]:
     """Return target weights {symbol: weight}. `prev_state` carries time-series
     position memory ({symbol: is_long}) and is mutated in place for that mode."""
+    if sizing.scheme != "equal_weight":
+        raise NotImplementedError(
+            f"sizing scheme '{sizing.scheme}' is not supported yet; only 'equal_weight' is available in Slice 1"
+        )
     if isinstance(selection, CrossSectionalSelection):
         return _cross_sectional(selection, sizing, indicator_rows, tradable)
     if isinstance(selection, TimeSeriesSelection):
@@ -46,9 +50,12 @@ def _cross_sectional(
     tradable: list[str],
 ) -> dict[str, float]:
     row = indicator_rows[sel.rank_by].reindex(tradable).dropna()
-    ranked = row.sort_values(ascending=False)
-    longs = list(ranked.index[: sel.long_top])
-    shorts = list(ranked.index[len(ranked) - sel.short_bottom :]) if sel.short_bottom else []
+    ranked = list(row.sort_values(ascending=False).index)
+    long_n = min(sel.long_top, len(ranked))
+    longs = ranked[:long_n]
+    remaining = ranked[long_n:]
+    short_n = min(sel.short_bottom, len(remaining))
+    shorts = remaining[len(remaining) - short_n:] if short_n else []
     n = len(longs) + len(shorts)
     if n == 0:
         return {}
