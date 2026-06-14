@@ -1,0 +1,11 @@
+{
+  "name": "btc_buy_and_hold",
+  "universe": ["BTC/USDT"],
+  "indicators": [{"type": "momentum", "id": "m1", "lookback": 1}],
+  "selection": {"mode": "cross_sectional", "rank_by": "m1", "long_top": 1, "short_bottom": 0},
+  "sizing": {"scheme": "equal_weight", "gross_leverage": 1.0},
+  "rebalance": "daily",
+  "costs": {"fee_bps": 10, "slippage_bps": 5},
+  "start": "2020-01-01",
+  "end": "2024-01-01"
+}
