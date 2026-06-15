@@ -51,17 +51,19 @@ def run(spec_path: Path, cache_dir: Path = DEFAULT_CACHE_DIR, starting_cash: flo
 
 
 @app.command()
-def fetch(cache_dir: Path = DEFAULT_CACHE_DIR) -> None:
-    """Fetch/refresh daily OHLCV for the default universe into the local cache."""
+def fetch(cache_dir: Path = DEFAULT_CACHE_DIR, start: str = "2017-01-01") -> None:
+    """Fetch/refresh full daily OHLCV history for the default universe into the cache."""
     import ccxt
+    from datetime import datetime, timezone
 
     from hedgefund.data.cache import write_symbol
-    from hedgefund.data.fetch import fetch_ohlcv, ohlcv_to_frame
+    from hedgefund.data.fetch import fetch_ohlcv_paginated, ohlcv_to_frame
     from hedgefund.data.universe import DEFAULT_UNIVERSE
 
+    since_ms = int(datetime.fromisoformat(start).replace(tzinfo=timezone.utc).timestamp() * 1000)
     exchange = ccxt.binance({"enableRateLimit": True})
     for symbol in DEFAULT_UNIVERSE:
-        rows = fetch_ohlcv(exchange, symbol, since_ms=None, limit=1000)
+        rows = fetch_ohlcv_paginated(exchange, symbol, since_ms=since_ms, limit=1000)
         frame = ohlcv_to_frame(rows)
         write_symbol(symbol, frame, cache_dir=cache_dir)
         typer.echo(f"cached {symbol}: {len(frame)} bars")
