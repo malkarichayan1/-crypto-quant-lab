@@ -94,11 +94,22 @@ docker-compose.yml    # repo root — local Postgres
 
 1. Route receives a `StrategySpec` body (+ optional `starting_cash`).
 2. Route validates the spec via the existing `validate_spec()`.
-3. Route loads the price panel (`load_panel`) for `universe + benchmark`.
+3. Route loads the price panel for `universe + benchmark` via an injectable
+   panel-loader dependency (`get_panel_loader`), which defaults to `load_panel`
+   bound to the cache dir. Tests override this dependency with a synthetic panel
+   so the API suite never needs real market data.
 4. Route calls `run_backtest()` then `summarize()` — identical to the CLI path.
 5. Route serializes curves/trade log/metrics and calls
    `repository.create(...)`, timing the wall-clock engine duration.
 6. Route returns the full result as a `BacktestResultResponse`.
+
+### Testability seam
+
+`get_panel_loader` is the single injection point that decouples the API from the
+parquet cache. Production wiring returns `lambda symbols, start, end: load_panel(...)`;
+tests use FastAPI's `app.dependency_overrides` to return the existing
+`single_asset_panel` fixture. This mirrors how `tests/test_e2e.py` already runs the
+engine against a synthetic panel.
 
 ## 4. API surface
 
@@ -159,9 +170,12 @@ shim, no mocks — so schema and migration behavior matches production.
 - **Integration:** FastAPI `TestClient` exercises route → repository → DB. Covers
   `POST` happy path (submit minimal spec, assert 201, assert metrics keys present,
   assert a DB row exists), `GET` list/by-id, `DELETE`, and 404/400/422 paths.
-- **Smoke:** one test that `POST`s the existing `examples/momentum.json` spec and
-  asserts a valid result with `sharpe_ratio` and `information_ratio` present —
-  catches any wiring break between the API and the existing engine.
+- **Smoke:** one test that `POST`s a minimal spec (single-symbol universe) with
+  the panel loader overridden to the `single_asset_panel` fixture, and asserts a
+  valid result with `sharpe` and `total_return` present in `metrics` and a row
+  persisted — catches any wiring break between the API and the existing engine
+  without depending on the parquet cache. (`specs/example_momentum.json` remains
+  the documented real-data example for manual runs against a populated cache.)
 
 Coverage target: **80%** on `hedgefund/api/`, matching the engine and risk gates.
 
