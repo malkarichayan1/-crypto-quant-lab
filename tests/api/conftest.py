@@ -3,10 +3,15 @@ from __future__ import annotations
 import os
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from hedgefund.api.app import create_app
+from hedgefund.api.db.engine import get_session
 from hedgefund.api.db.models import Base
+from hedgefund.api.deps import get_panel_loader
+from tests.fixtures.panels import single_asset_panel
 
 _TEST_URL = os.environ.get(
     "TEST_DATABASE_URL",
@@ -36,3 +41,24 @@ def session(engine):
         sess.close()
         trans.rollback()
         connection.close()
+
+
+@pytest.fixture
+def client(session):
+    app = create_app()
+
+    def _override_session():
+        yield session
+
+    def _override_loader():
+        def _load(symbols, start, end):
+            # 6 ascending daily closes from 2020-01-01, symbol "AAA"
+            return single_asset_panel([100.0, 110.0, 121.0, 133.1, 146.41, 161.05])
+
+        return _load
+
+    app.dependency_overrides[get_session] = _override_session
+    app.dependency_overrides[get_panel_loader] = _override_loader
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
