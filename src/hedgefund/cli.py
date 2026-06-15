@@ -35,11 +35,19 @@ def run(spec_path: Path, cache_dir: Path = DEFAULT_CACHE_DIR, starting_cash: flo
     if not isinstance(spec.universe, list):
         typer.echo("universe='all' not supported yet; pass an explicit list", err=True)
         raise typer.Exit(code=1)
-    panel = load_panel(spec.universe, spec.start, spec.end, cache_dir=cache_dir)
+    symbols = list(dict.fromkeys([*spec.universe, spec.benchmark]))
+    panel = load_panel(symbols, spec.start, spec.end, cache_dir=cache_dir)
     result = run_backtest(spec, panel, starting_cash=starting_cash)
-    metrics = summarize(result.equity_curve)
+    if result.benchmark_curve is not None:
+        metrics = summarize(result.equity_curve, benchmark=result.benchmark_curve)
+    else:
+        typer.echo(
+            f"note: benchmark '{spec.benchmark}' not in cache; relative metrics skipped",
+            err=True,
+        )
+        metrics = summarize(result.equity_curve)
     for k, v in metrics.items():
-        typer.echo(f"{k:>14}: {v: .4f}")
+        typer.echo(f"{k:>18}: {v: .4f}")
 
 
 @app.command()

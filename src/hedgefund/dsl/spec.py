@@ -96,3 +96,4 @@ class StrategySpec(BaseModel):
     costs: Costs = Costs()
     start: date
     end: date
+    benchmark: str = "BTC/USDT"

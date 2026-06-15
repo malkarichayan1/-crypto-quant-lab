@@ -69,9 +69,70 @@ def cvar(rets: pd.Series, level: float = 0.95) -> float:
     return float(-tail.mean())
 
 
-def summarize(equity: pd.Series, periods_per_year: int = PERIODS_PER_YEAR) -> dict[str, float]:
+def _align(rs: pd.Series, rb: pd.Series) -> tuple[pd.Series, pd.Series]:
+    """Inner-join two return series on their index and drop any NaN rows."""
+    joined = pd.concat([rs, rb], axis=1, join="inner").dropna()
+    return joined.iloc[:, 0], joined.iloc[:, 1]
+
+
+def beta(strategy_rets: pd.Series, benchmark_rets: pd.Series) -> float:
+    rs, rb = _align(strategy_rets, benchmark_rets)
+    if len(rs) < 2:
+        return 0.0
+    var_b = rb.var(ddof=0)
+    if var_b == 0:
+        return 0.0
+    cov = ((rs - rs.mean()) * (rb - rb.mean())).mean()
+    return float(cov / var_b)
+
+
+def alpha(
+    strategy_rets: pd.Series,
+    benchmark_rets: pd.Series,
+    periods_per_year: int = PERIODS_PER_YEAR,
+) -> float:
+    """Jensen's alpha (risk-free = 0), annualized arithmetically."""
+    rs, rb = _align(strategy_rets, benchmark_rets)
+    if len(rs) < 2:
+        return 0.0
+    per_period = rs.mean() - beta(rs, rb) * rb.mean()
+    return float(per_period * periods_per_year)
+
+
+def tracking_error(
+    strategy_rets: pd.Series,
+    benchmark_rets: pd.Series,
+    periods_per_year: int = PERIODS_PER_YEAR,
+) -> float:
+    rs, rb = _align(strategy_rets, benchmark_rets)
+    if len(rs) < 2:
+        return 0.0
+    active = rs - rb
+    return float(active.std(ddof=0) * np.sqrt(periods_per_year))
+
+
+def information_ratio(
+    strategy_rets: pd.Series,
+    benchmark_rets: pd.Series,
+    periods_per_year: int = PERIODS_PER_YEAR,
+) -> float:
+    rs, rb = _align(strategy_rets, benchmark_rets)
+    if len(rs) < 2:
+        return 0.0
+    active = rs - rb
+    sd = active.std(ddof=0)
+    if sd == 0:
+        return 0.0
+    return float((active.mean() / sd) * np.sqrt(periods_per_year))
+
+
+def summarize(
+    equity: pd.Series,
+    periods_per_year: int = PERIODS_PER_YEAR,
+    benchmark: pd.Series | None = None,
+) -> dict[str, float]:
     r = returns(equity)
-    return {
+    out = {
         "total_return": total_return(equity),
         "cagr": cagr(equity, periods_per_year),
         "ann_vol": ann_vol(equity, periods_per_year),
@@ -81,3 +142,10 @@ def summarize(equity: pd.Series, periods_per_year: int = PERIODS_PER_YEAR) -> di
         "var_95": value_at_risk(r, 0.95),
         "cvar_95": cvar(r, 0.95),
     }
+    if benchmark is not None:
+        rb = returns(benchmark)
+        out["beta"] = beta(r, rb)
+        out["alpha"] = alpha(r, rb, periods_per_year)
+        out["tracking_error"] = tracking_error(r, rb, periods_per_year)
+        out["information_ratio"] = information_ratio(r, rb, periods_per_year)
+    return out
