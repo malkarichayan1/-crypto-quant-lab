@@ -32,15 +32,48 @@ def target_weights(
 ) -> dict[str, float]:
     """Return target weights {symbol: weight}. `prev_state` carries time-series
     position memory ({symbol: is_long}) and is mutated in place for that mode."""
-    if sizing.scheme != "equal_weight":
-        raise NotImplementedError(
-            f"sizing scheme '{sizing.scheme}' is not supported yet; only 'equal_weight' is available in Slice 1"
-        )
     if isinstance(selection, CrossSectionalSelection):
         return _cross_sectional(selection, sizing, indicator_rows, tradable)
     if isinstance(selection, TimeSeriesSelection):
         return _time_series(selection, sizing, indicator_rows, tradable, prev_state)
     raise TypeError(f"unknown selection: {selection!r}")
+
+
+def _apply_sizing(
+    signed: list[tuple[str, float]],
+    sizing: Sizing,
+    indicator_rows: dict[str, pd.Series],
+) -> dict[str, float]:
+    """Turn selected (symbol, sign) pairs into weights per the sizing scheme.
+
+    - equal_weight:   each |weight| = gross_leverage / n
+    - fixed_fraction: each |weight| = fraction (independent of n)
+    - inverse_vol:    |weight| proportional to 1/vol, normalized to gross_leverage;
+                      symbols with missing or non-positive vol are dropped.
+    """
+    if not signed:
+        return {}
+    if sizing.scheme == "equal_weight":
+        per = sizing.gross_leverage / len(signed)
+        return {s: sign * per for s, sign in signed}
+    if sizing.scheme == "fixed_fraction":
+        return {s: sign * sizing.fraction for s, sign in signed}
+    if sizing.scheme == "inverse_vol":
+        vol_row = indicator_rows[sizing.vol_indicator_id]
+        inv: dict[str, tuple[float, float]] = {}
+        for s, sign in signed:
+            v = vol_row.get(s, float("nan"))
+            if v is None or math.isnan(v) or v <= 0:
+                continue
+            inv[s] = (sign, 1.0 / v)
+        total = sum(mag for _, mag in inv.values())
+        if total == 0:
+            return {}
+        return {
+            s: sign * sizing.gross_leverage * (mag / total)
+            for s, (sign, mag) in inv.items()
+        }
+    raise NotImplementedError(f"unknown sizing scheme: {sizing.scheme!r}")
 
 
 def _cross_sectional(
@@ -56,13 +89,8 @@ def _cross_sectional(
     remaining = ranked[long_n:]
     short_n = min(sel.short_bottom, len(remaining))
     shorts = remaining[len(remaining) - short_n:] if short_n else []
-    n = len(longs) + len(shorts)
-    if n == 0:
-        return {}
-    per = sizing.gross_leverage / n
-    weights = {s: per for s in longs}
-    weights.update({s: -per for s in shorts})
-    return weights
+    signed = [(s, 1.0) for s in longs] + [(s, -1.0) for s in shorts]
+    return _apply_sizing(signed, sizing, indicator_rows)
 
 
 def _time_series(
@@ -86,7 +114,4 @@ def _time_series(
         prev_state[sym] = is_long
         if is_long:
             active.append(sym)
-    if not active:
-        return {}
-    per = sizing.gross_leverage / len(active)
-    return {s: per for s in active}
+    return _apply_sizing([(s, 1.0) for s in active], sizing, indicator_rows)

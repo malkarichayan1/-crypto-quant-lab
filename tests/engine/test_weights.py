@@ -31,12 +31,37 @@ def test_cross_sectional_long_short():
     assert w["DDD"] == -0.5
 
 
-def test_unsupported_sizing_scheme_raises():
-    indicator_row = pd.Series({"AAA": 0.2, "BBB": 0.5})
-    sel = CrossSectionalSelection(mode="cross_sectional", rank_by="m", long_top=1, short_bottom=0)
-    sizing = Sizing(scheme="inverse_vol", vol_indicator_id="v")
-    with pytest.raises(NotImplementedError, match="equal_weight"):
-        target_weights(sel, sizing, {"m": indicator_row}, ["AAA", "BBB"], prev_state={})
+def test_fixed_fraction_allocates_fixed_per_position():
+    indicator_row = pd.Series({"AAA": 0.5, "BBB": 0.2, "CCC": 0.1})
+    tradable = ["AAA", "BBB", "CCC"]
+    sel = CrossSectionalSelection(mode="cross_sectional", rank_by="m", long_top=2, short_bottom=0)
+    sizing = Sizing(scheme="fixed_fraction", fraction=0.25)
+    w = target_weights(sel, sizing, {"m": indicator_row}, tradable, prev_state={})
+    assert w["AAA"] == 0.25
+    assert w["BBB"] == 0.25
+    assert "CCC" not in w
+
+
+def test_inverse_vol_weights_inversely_proportional_to_vol():
+    indicator_row = pd.Series({"AAA": 0.5, "BBB": 0.2})
+    vol_row = pd.Series({"AAA": 0.10, "BBB": 0.20})  # AAA half the vol of BBB
+    tradable = ["AAA", "BBB"]
+    sel = CrossSectionalSelection(mode="cross_sectional", rank_by="m", long_top=2, short_bottom=0)
+    sizing = Sizing(scheme="inverse_vol", gross_leverage=1.0, vol_indicator_id="v")
+    w = target_weights(sel, sizing, {"m": indicator_row, "v": vol_row}, tradable, prev_state={})
+    # 1/0.10=10, 1/0.20=5, total 15 -> AAA=2/3, BBB=1/3; gross = 1.0
+    assert w["AAA"] == pytest.approx(2 / 3)
+    assert w["BBB"] == pytest.approx(1 / 3)
+    assert w["AAA"] + w["BBB"] == pytest.approx(1.0)
+
+
+def test_inverse_vol_excludes_symbols_with_missing_or_zero_vol():
+    indicator_row = pd.Series({"AAA": 0.5, "BBB": 0.2})
+    vol_row = pd.Series({"AAA": 0.10})  # BBB missing -> excluded
+    sel = CrossSectionalSelection(mode="cross_sectional", rank_by="m", long_top=2, short_bottom=0)
+    sizing = Sizing(scheme="inverse_vol", gross_leverage=1.0, vol_indicator_id="v")
+    w = target_weights(sel, sizing, {"m": indicator_row, "v": vol_row}, ["AAA", "BBB"], prev_state={})
+    assert w == {"AAA": pytest.approx(1.0)}
 
 
 def test_cross_sectional_overlap_longs_take_priority_no_flip():
