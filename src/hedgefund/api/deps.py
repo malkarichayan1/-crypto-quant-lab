@@ -18,3 +18,14 @@ def get_panel_loader() -> PanelLoader:
         return load_panel(symbols, start, end)
 
     return _load
+
+
+from hedgefund.agents.llm import CallLLM, call_llm as _call_llm
+
+
+def get_call_llm() -> CallLLM:
+    """FastAPI dependency returning the Anthropic LLM caller.
+
+    Override in tests via app.dependency_overrides[get_call_llm].
+    """
+    return _call_llm
