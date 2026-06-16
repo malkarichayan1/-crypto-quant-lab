@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import date
 
+from hedgefund.agents.llm import CallLLM, call_llm as _call_llm
 from hedgefund.data.panel import PricePanel, load_panel
 
 PanelLoader = Callable[[list[str], date, date], PricePanel]
@@ -18,9 +19,6 @@ def get_panel_loader() -> PanelLoader:
         return load_panel(symbols, start, end)
 
     return _load
-
-
-from hedgefund.agents.llm import CallLLM, call_llm as _call_llm
 
 
 def get_call_llm() -> CallLLM:
