@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Step3Selection } from './Step3Selection'
 import { INITIAL_FORM_STATE } from './types'
@@ -20,12 +20,10 @@ describe('Step3Selection', () => {
   })
 
   it('updates long_top when changed', async () => {
-    const user = userEvent.setup()
     const update = vi.fn()
     render(<Step3Selection state={INITIAL_FORM_STATE} update={update} />)
-    const input = screen.getByLabelText('Long top N')
-    await user.clear(input)
-    await user.type(input, '5')
+    const input = screen.getByLabelText('Long top N') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '5' } })
     expect(update).toHaveBeenLastCalledWith({ longTop: 5 })
   })
 })

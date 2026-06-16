@@ -1,7 +1,6 @@
-import { useState } from 'react'
 import type { SizingScheme, SpecFormState } from './types'
 
-interface Props {
+type Props = {
   state: SpecFormState
   update: (patch: Partial<SpecFormState>) => void
 }
@@ -9,10 +8,6 @@ interface Props {
 const SCHEMES: SizingScheme[] = ['equal_weight', 'inverse_vol', 'fixed_fraction']
 
 export function Step4Sizing({ state, update }: Props) {
-  const [feeBps, setFeeBps] = useState(state.feeBps)
-  const [slippageBps, setSlippageBps] = useState(state.slippageBps)
-  const [grossLeverage, setGrossLeverage] = useState(state.grossLeverage)
-  const [fraction, setFraction] = useState(state.fraction)
 
   return (
     <div className="step">
@@ -31,12 +26,8 @@ export function Step4Sizing({ state, update }: Props) {
         <input
           type="number"
           step="0.1"
-          value={grossLeverage}
-          onChange={(e) => {
-            const n = Number(e.target.value)
-            setGrossLeverage(n)
-            update({ grossLeverage: n })
-          }}
+          value={state.grossLeverage}
+          onChange={(e) => update({ grossLeverage: Number(e.target.value) })}
         />
       </label>
 
@@ -46,12 +37,8 @@ export function Step4Sizing({ state, update }: Props) {
           <input
             type="number"
             step="0.01"
-            value={fraction}
-            onChange={(e) => {
-              const n = Number(e.target.value)
-              setFraction(n)
-              update({ fraction: n })
-            }}
+            value={state.fraction}
+            onChange={(e) => update({ fraction: Number(e.target.value) })}
           />
         </label>
       )}
@@ -86,12 +73,8 @@ export function Step4Sizing({ state, update }: Props) {
         Fee (bps)
         <input
           type="number"
-          value={feeBps}
-          onChange={(e) => {
-            const n = Number(e.target.value)
-            setFeeBps(n)
-            update({ feeBps: n })
-          }}
+          value={state.feeBps}
+          onChange={(e) => update({ feeBps: Number(e.target.value) })}
         />
       </label>
 
@@ -99,12 +82,8 @@ export function Step4Sizing({ state, update }: Props) {
         Slippage (bps)
         <input
           type="number"
-          value={slippageBps}
-          onChange={(e) => {
-            const n = Number(e.target.value)
-            setSlippageBps(n)
-            update({ slippageBps: n })
-          }}
+          value={state.slippageBps}
+          onChange={(e) => update({ slippageBps: Number(e.target.value) })}
         />
       </label>
     </div>

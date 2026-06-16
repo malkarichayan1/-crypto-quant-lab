@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Step4Sizing } from './Step4Sizing'
 import { INITIAL_FORM_STATE } from './types'
@@ -24,9 +24,9 @@ describe('Step4Sizing', () => {
     const user = userEvent.setup()
     const update = vi.fn()
     render(<Step4Sizing state={INITIAL_FORM_STATE} update={update} />)
-    const input = screen.getByLabelText('Fee (bps)')
-    await user.clear(input)
-    await user.type(input, '20')
+    const input = screen.getByLabelText('Fee (bps)') as HTMLInputElement
+    // For prop-controlled number inputs, use fireEvent to trigger onChange
+    fireEvent.change(input, { target: { value: '20' } })
     expect(update).toHaveBeenLastCalledWith({ feeBps: 20 })
   })
 })
