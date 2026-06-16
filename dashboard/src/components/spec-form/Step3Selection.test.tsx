@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { Step3Selection } from './Step3Selection'
 import { INITIAL_FORM_STATE } from './types'
 

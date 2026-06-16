@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { Step4Sizing } from './Step4Sizing'
 import { INITIAL_FORM_STATE } from './types'
 
@@ -20,8 +19,7 @@ describe('Step4Sizing', () => {
     expect(screen.getByLabelText('Vol indicator')).toBeInTheDocument()
   })
 
-  it('updates fee bps when changed', async () => {
-    const user = userEvent.setup()
+  it('updates fee bps when changed', () => {
     const update = vi.fn()
     render(<Step4Sizing state={INITIAL_FORM_STATE} update={update} />)
     const input = screen.getByLabelText('Fee (bps)') as HTMLInputElement
