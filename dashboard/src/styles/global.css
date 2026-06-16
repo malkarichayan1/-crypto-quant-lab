@@ -52,3 +52,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .symbol-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-1); }
 .step-nav { display: flex; gap: var(--space-2); margin-top: var(--space-4); }
 .indicator-row { display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-2); }
+
+.result-layout { display: flex; gap: var(--space-4); align-items: flex-start; }
+.result-layout .chart-col { flex: 2; background: var(--color-surface); border-radius: var(--radius); padding: var(--space-3); }
+.metrics-panel { flex: 1; background: var(--color-surface); border-radius: var(--radius); padding: var(--space-3); }
+.metric-row { display: flex; justify-content: space-between; padding: var(--space-2) 0; border-bottom: 1px solid var(--color-border); }
+.metric-label { color: var(--color-text-muted); }
+.trade-log { margin-top: var(--space-4); }
+.trade-log table { width: 100%; border-collapse: collapse; margin-top: var(--space-2); }
+.trade-log th, .trade-log td { text-align: left; padding: var(--space-2); border-bottom: 1px solid var(--color-border); }
