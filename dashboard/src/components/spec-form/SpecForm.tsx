@@ -5,6 +5,8 @@ import { buildCreateRequest } from '../../lib/buildRequest'
 import type { CreateBacktestRequest } from '../../types'
 import { Step1Strategy } from './Step1Strategy'
 import { Step2Indicators } from './Step2Indicators'
+import { Step3Selection } from './Step3Selection'
+import { Step4Sizing } from './Step4Sizing'
 
 interface Props {
   onSubmit: (req: CreateBacktestRequest) => void
@@ -45,8 +47,8 @@ export function SpecForm({ onSubmit, pending }: Props) {
 
         {step === 0 && <Step1Strategy state={state} update={update} />}
         {step === 1 && <Step2Indicators state={state} update={update} />}
-        {step === 2 && <p>Selection step (added in Task 9)</p>}
-        {step === 3 && <p>Sizing step (added in Task 9)</p>}
+        {step === 2 && <Step3Selection state={state} update={update} />}
+        {step === 3 && <Step4Sizing state={state} update={update} />}
 
         <div className="step-nav">
           {step > 0 && (
