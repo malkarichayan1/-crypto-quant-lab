@@ -40,3 +40,15 @@ button {
 }
 button.primary { background: var(--color-accent); color: #fff; font-weight: 600; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.spec-form { display: flex; gap: var(--space-4); }
+.spec-form .steps { width: 180px; display: flex; flex-direction: column; gap: var(--space-2); }
+.spec-form .steps > div { color: var(--color-text-muted); padding: var(--space-2); border-radius: var(--radius); }
+.spec-form .steps .step-active { color: var(--color-accent); background: var(--color-surface); }
+.spec-form .step-body { flex: 1; }
+.step { display: flex; flex-direction: column; gap: var(--space-3); }
+.step label { display: flex; flex-direction: column; gap: var(--space-1); color: var(--color-text-muted); }
+.step input, .step select { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-2); }
+.symbol-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-1); }
+.step-nav { display: flex; gap: var(--space-2); margin-top: var(--space-4); }
+.indicator-row { display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-2); }
