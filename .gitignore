@@ -9,3 +9,5 @@ htmlcov/
 hedgefund.egg-info/
 *.egg-info/
 .env
+dashboard/node_modules
+dashboard/dist
