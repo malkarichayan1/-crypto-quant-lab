@@ -61,3 +61,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .trade-log { margin-top: var(--space-4); }
 .trade-log table { width: 100%; border-collapse: collapse; margin-top: var(--space-2); }
 .trade-log th, .trade-log td { text-align: left; padding: var(--space-2); border-bottom: 1px solid var(--color-border); }
+
+.run-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+@media (min-width: 900px) { .run-grid { grid-template-columns: repeat(3, 1fr); } }
+.run-card { background: var(--color-surface); border-radius: var(--radius); padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); }
+.run-card-title { color: var(--color-text); font-weight: 600; }
+.run-card-date { color: var(--color-text-muted); font-size: var(--text-sm); }
+.run-card-metrics { display: flex; gap: var(--space-3); font-size: var(--text-sm); }
