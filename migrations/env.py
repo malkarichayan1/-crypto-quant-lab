@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 
 from hedgefund.api.config import get_settings
 from hedgefund.api.db.models import Base
+from hedgefund.api.db import agent_models as _agent_models  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:
