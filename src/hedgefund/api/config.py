@@ -16,10 +16,14 @@ class Settings:
         database_url: str,
         anthropic_api_key: str | None,
         anthropic_model: str,
+        paper_tick_interval_seconds: int = 60,
+        paper_fetch_lookback_bars: int = 1000,
     ) -> None:
         self.database_url = database_url
         self.anthropic_api_key = anthropic_api_key
         self.anthropic_model = anthropic_model
+        self.paper_tick_interval_seconds = paper_tick_interval_seconds
+        self.paper_fetch_lookback_bars = paper_fetch_lookback_bars
 
 
 @lru_cache
@@ -28,4 +32,6 @@ def get_settings() -> Settings:
         database_url=os.environ.get("DATABASE_URL", _DEFAULT_DB_URL),
         anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY"),
         anthropic_model=os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6"),
+        paper_tick_interval_seconds=int(os.environ.get("PAPER_TICK_INTERVAL_SECONDS", "60")),
+        paper_fetch_lookback_bars=int(os.environ.get("PAPER_FETCH_LOOKBACK_BARS", "1000")),
     )
