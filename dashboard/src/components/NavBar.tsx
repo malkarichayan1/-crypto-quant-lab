@@ -8,6 +8,8 @@ export function NavBar() {
       <NavLink to="/history">History</NavLink>
       <NavLink to="/research">Research</NavLink>
       <NavLink to="/research/history">Research History</NavLink>
+      <NavLink to="/paper">Paper Trading</NavLink>
+      <NavLink to="/paper/history">Paper History</NavLink>
     </nav>
   )
 }

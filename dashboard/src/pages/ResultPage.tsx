@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { getBacktest } from '../api/backtests'
 import { EquityChart } from '../components/EquityChart'
 import { MetricsPanel } from '../components/MetricsPanel'
@@ -27,6 +27,11 @@ export function ResultPage() {
         <MetricsPanel metrics={data.metrics} />
       </div>
       <TradeLogTable trades={data.trade_log} />
+      <div style={{ marginTop: 'var(--space-3)' }}>
+        <Link to={`/paper?source_backtest_id=${id}`} className="paper-trade-link">
+          Paper trade this →
+        </Link>
+      </div>
     </div>
   )
 }

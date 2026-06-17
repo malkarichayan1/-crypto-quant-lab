@@ -6,6 +6,9 @@ import { ResultPage } from './pages/ResultPage'
 import { AgentRunPage } from './pages/AgentRunPage'
 import { AgentResultPage } from './pages/AgentResultPage'
 import { AgentHistoryPage } from './pages/AgentHistoryPage'
+import { PaperStartPage } from './pages/PaperStartPage'
+import { PaperHistoryPage } from './pages/PaperHistoryPage'
+import { PaperLivePage } from './pages/PaperLivePage'
 
 export default function App() {
   return (
@@ -19,6 +22,9 @@ export default function App() {
           <Route path="/research" element={<AgentRunPage />} />
           <Route path="/research/runs/:id" element={<AgentResultPage />} />
           <Route path="/research/history" element={<AgentHistoryPage />} />
+          <Route path="/paper" element={<PaperStartPage />} />
+          <Route path="/paper/history" element={<PaperHistoryPage />} />
+          <Route path="/paper/sessions/:id" element={<PaperLivePage />} />
         </Routes>
       </main>
     </>

@@ -102,3 +102,25 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .agent-form textarea { min-height: 80px; resize: vertical; }
 .agent-runs-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
 @media (min-width: 900px) { .agent-runs-grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* Paper Trading */
+.paper-session-card { display: block; padding: 1rem; border: 1px solid var(--color-border, #2a2a2a); border-radius: 8px; text-decoration: none; color: inherit; }
+.paper-session-card:hover { border-color: var(--color-accent, #4c8bf5); }
+.paper-session-label { font-weight: 600; margin-bottom: 0.4rem; }
+.paper-session-meta { display: flex; gap: 0.6rem; align-items: center; font-size: 0.85rem; }
+.status-badge.status-active { color: #2ecc71; }
+.status-badge.status-stopped { color: #888; }
+.status-badge.status-error { color: #e74c3c; }
+.holdings-table { width: 100%; border-collapse: collapse; }
+.holdings-table th, .holdings-table td { text-align: left; padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--color-border, #2a2a2a); }
+.live-trade-feed { list-style: none; padding: 0; margin: 0; }
+.trade-row { display: flex; gap: 0.6rem; align-items: center; padding: 0.3rem 0; border-bottom: 1px solid var(--color-border, #2a2a2a); font-size: 0.85rem; }
+.badge-catchup { font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px; background: #444; color: #ddd; }
+.pos { color: #2ecc71; } .neg { color: #e74c3c; } .muted { color: #888; }
+.paper-sessions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.paper-live-header { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1.5rem; }
+.paper-live-equity { font-size: 1.4rem; font-weight: 600; }
+.paper-form { display: flex; flex-direction: column; gap: var(--space-3); max-width: 520px; }
+.paper-form label { display: flex; flex-direction: column; gap: var(--space-1); color: var(--color-text-muted, #888); }
+.paper-form input, .paper-form textarea { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border, #333); border-radius: var(--radius); padding: var(--space-2); font: inherit; }
+@media (min-width: 900px) { .paper-sessions-grid { grid-template-columns: repeat(3, 1fr); } }
