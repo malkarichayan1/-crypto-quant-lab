@@ -19,7 +19,7 @@ class BacktestResult:
     benchmark_curve: pd.Series | None = None
 
 
-def _is_rebalance_day(rebalance: str, ts: pd.Timestamp) -> bool:
+def is_rebalance_day(rebalance: str, ts: pd.Timestamp) -> bool:
     if rebalance == "daily":
         return True
     return ts.weekday() == 0  # weekly = Mondays
@@ -89,7 +89,7 @@ def run_backtest(spec: StrategySpec, panel, starting_cash: float = 10_000.0) -> 
         equity.append(pf.value(mark_prices))
 
         # 3) Decide a new target from data <= t, to be filled NEXT bar.
-        if _is_rebalance_day(spec.rebalance, t):
+        if is_rebalance_day(spec.rebalance, t):
             tradable = [s for s in close.columns if panel.is_tradable(s, t)]
             rows = {iid: frame.loc[t] for iid, frame in indicators.items()}
             pending_target = target_weights(spec.selection, spec.sizing, rows, tradable, ts_state)
