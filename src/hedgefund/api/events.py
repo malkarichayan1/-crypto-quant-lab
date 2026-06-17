@@ -7,9 +7,9 @@ _queues: dict[uuid.UUID, asyncio.Queue] = {}
 
 
 def create_queue(run_id: uuid.UUID) -> asyncio.Queue:
-    q: asyncio.Queue = asyncio.Queue()
-    _queues[run_id] = q
-    return q
+    if run_id not in _queues:
+        _queues[run_id] = asyncio.Queue()
+    return _queues[run_id]
 
 
 def get_queue(run_id: uuid.UUID) -> asyncio.Queue | None:

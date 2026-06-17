@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -23,6 +26,39 @@ def create_app() -> FastAPI:
     @app.get("/health", tags=["meta"])
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.on_event("startup")
+    async def _start_paper_ticker() -> None:
+        if os.environ.get("PAPER_TICKER_ENABLED", "1") != "1":
+            return
+        from hedgefund.api import events
+        from hedgefund.api.config import get_settings
+        from hedgefund.api.db.engine import SessionLocal
+        from hedgefund.api.paper_panel import get_paper_panel_loader
+        from hedgefund.paper import ticker as paper_ticker
+
+        settings = get_settings()
+        loader = get_paper_panel_loader()
+
+        def publish_for(session_id):
+            events.create_queue(session_id)
+
+            def _publish(ev: dict) -> None:
+                q = events.get_queue(session_id)
+                if q is not None:
+                    q.put_nowait(ev)
+
+            return _publish
+
+        asyncio.create_task(
+            paper_ticker.ticker_loop(
+                session_factory=SessionLocal,
+                panel_loader=loader,
+                publish_for=publish_for,
+                interval_seconds=settings.paper_tick_interval_seconds,
+                lookback_bars=settings.paper_fetch_lookback_bars,
+            )
+        )
 
     @app.on_event("startup")
     def _mark_stale_runs() -> None:
