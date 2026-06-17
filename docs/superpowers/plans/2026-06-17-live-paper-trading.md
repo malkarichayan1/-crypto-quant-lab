@@ -244,6 +244,13 @@ def test_initial_state_factory():
     assert state.ts_state == {}
     assert state.prev_ts is None
     assert state.last_processed_ts is None
+
+
+def test_initial_with_start_ts_stamps_high_water_mark():
+    state = PaperState.initial(10_000.0, start_ts="2026-06-17T12:00:00+00:00")
+    assert state.last_processed_ts == "2026-06-17T12:00:00+00:00"
+    assert state.cash == 10_000.0
+    assert state.positions == {}
 ```
 
 - [ ] **Step 3: Run test to verify it fails**
@@ -279,8 +286,12 @@ class PaperState:
     last_processed_ts: str | None = None
 
     @classmethod
-    def initial(cls, starting_cash: float) -> "PaperState":
-        return cls(cash=starting_cash)
+    def initial(cls, starting_cash: float, *, start_ts: str | None = None) -> "PaperState":
+        """Fresh session state. `start_ts` stamps the high-water mark so the
+        lookback window warms indicators but only candles closing after launch
+        are recorded (see H2 / Task 13). Omit it for pure-logic tests that want
+        every candle processed."""
+        return cls(cash=starting_cash, last_processed_ts=start_ts)
 
     def to_json(self) -> dict:
         return asdict(self)
@@ -317,7 +328,11 @@ git commit -m "feat(paper): add resumable PaperState with JSON round-trip"
 - Create: `src/hedgefund/paper/engine.py`
 - Test: `tests/paper/test_engine.py`
 
-This is the core. `step()` reproduces one iteration of the backtest loop for one candle, taking precomputed indicator frames (computed once per fetch by the ticker, exactly as the backtest computes once before iterating).
+This is the core. `step()` reproduces one iteration of the backtest loop for one candle, taking precomputed indicator frames (computed once per fetch by the ticker, exactly as the backtest computes once before iterating). It must reproduce **all three** phases of the loop, including the rebalance-day gate that decides a new target only on rebalance bars.
+
+- [ ] **Step 0: Expose the rebalance gate**
+
+In `src/hedgefund/engine/backtest.py`, rename the private `_is_rebalance_day` to a public `is_rebalance_day` and update its single internal caller (the `if _is_rebalance_day(...)` at the target-decision phase of `run_backtest`). Behavior-preserving — existing backtest tests stay green. `step()` reuses this exact function so live and backtest share one definition of "is this a rebalance bar?" with no drift.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -392,6 +407,28 @@ def test_second_step_fills_pending_target_at_open():
     # Equity marked at bar 1 close (also 110.0) ~= 10_000 (zero costs).
     assert equity == pytest.approx(10_000.0, rel=1e-9)
     assert new_state.pending_target == {"BTC/USDT": 1.0}
+
+
+def test_non_rebalance_bar_decides_no_target():
+    # 2026-06-16 is a Tuesday; with weekly rebalance the gate only fires on
+    # Mondays, so a Tuesday bar must NOT decide a new target.
+    index = ["2026-06-16T00:00:00", "2026-06-16T01:00:00"]
+    panel = _panel(index, [100.0, 110.0])
+    spec = StrategySpec.model_validate({
+        "name": "always-long", "universe": ["BTC/USDT"],
+        "indicators": [{"type": "sma", "id": "s", "period": 1}],
+        "selection": {"mode": "time_series",
+                      "entry": {"indicator_id": "s", "op": ">", "value": 0},
+                      "exit": {"indicator_id": "s", "op": "<", "value": 0}},
+        "sizing": {"scheme": "equal_weight", "gross_leverage": 1.0},
+        "rebalance": "weekly",
+        "costs": {"fee_bps": 0.0, "slippage_bps": 0.0},
+        "start": "2026-06-16", "end": "2026-06-17",
+    })
+    indicators = compute_all(spec.indicators, panel.close)
+    state = PaperState.initial(starting_cash=10_000.0)
+    new_state, _, _ = step(spec, state, panel, indicators, panel.close.index[0])
+    assert new_state.pending_target is None  # Tuesday is not a rebalance bar
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -411,6 +448,7 @@ from dataclasses import dataclass
 import pandas as pd
 
 from hedgefund.dsl.spec import StrategySpec
+from hedgefund.engine.backtest import is_rebalance_day
 from hedgefund.engine.orders import rebalance_to_weights
 from hedgefund.engine.portfolio import Portfolio
 from hedgefund.engine.weights import target_weights
@@ -469,10 +507,16 @@ def step(
     mark_prices = {s: panel.close_at(s, ts) for s in pf.positions if panel.is_tradable(s, ts)}
     equity = pf.value(mark_prices)
 
-    # 3) Decide a new target from data <= ts (filled next bar).
-    tradable = [s for s in close.columns if panel.is_tradable(s, ts)]
-    rows = {iid: frame.loc[ts] for iid, frame in indicators.items()}
-    new_pending = target_weights(spec.selection, spec.sizing, rows, tradable, ts_state)
+    # 3) On a rebalance bar only, decide a new target from data <= ts (filled
+    #    next bar). On non-rebalance bars carry nothing forward -- exactly
+    #    mirroring run_backtest, which leaves pending_target = None between
+    #    rebalance bars, so the next bar fills nothing.
+    if is_rebalance_day(spec.rebalance, ts):
+        tradable = [s for s in close.columns if panel.is_tradable(s, ts)]
+        rows = {iid: frame.loc[ts] for iid, frame in indicators.items()}
+        new_pending = target_weights(spec.selection, spec.sizing, rows, tradable, ts_state)
+    else:
+        new_pending = None
 
     new_state = PaperState(
         cash=pf.cash,
@@ -1367,6 +1411,92 @@ git commit -m "test(paper): prove resume-from-state equivalence"
 
 ---
 
+## Task 9b: Backtest-vs-paper equivalence test
+
+**Files:**
+- Test: `tests/paper/test_equivalence.py`
+
+The headline success criterion is "a paper session over a given period behaves
+identically to a backtest of the same spec/period." Tasks 3 and 9 only compare
+step-vs-step; this task is the real guardrail, asserting a `step()` loop reproduces
+`run_backtest`'s equity curve for **both** rebalance modes. (Without the Task 3
+rebalance gate, the `weekly` case fails — that is the regression this test pins.)
+No new production code.
+
+- [ ] **Step 1: Write the test**
+
+Create `tests/paper/test_equivalence.py`:
+
+```python
+import pandas as pd
+import pytest
+
+from hedgefund.data.panel import PricePanel
+from hedgefund.dsl.spec import StrategySpec
+from hedgefund.engine.backtest import run_backtest
+from hedgefund.engine.indicators import compute_all
+from hedgefund.paper.engine import step
+from hedgefund.paper.state import PaperState
+
+
+def _panel(index, prices):
+    df = pd.DataFrame({"BTC/USDT": prices}, index=pd.DatetimeIndex(index))
+    return PricePanel(open=df, high=df, low=df, close=df, volume=df * 0 + 1.0)
+
+
+def _spec(rebalance):
+    # Daily bars so weekday()-based weekly rebalancing is exercised meaningfully.
+    return StrategySpec.model_validate({
+        "name": "ts", "universe": ["BTC/USDT"],
+        "indicators": [{"type": "sma", "id": "s", "period": 2}],
+        "selection": {"mode": "time_series",
+                      "entry": {"indicator_id": "s", "op": ">", "value": 0},
+                      "exit": {"indicator_id": "s", "op": "<", "value": 1e9}},  # may exit
+        "sizing": {"scheme": "equal_weight", "gross_leverage": 1.0},
+        "rebalance": rebalance,
+        "costs": {"fee_bps": 10.0, "slippage_bps": 5.0},
+        "start": "2026-06-15", "end": "2026-06-26"})  # Mon..Fri across two weeks
+
+
+@pytest.mark.parametrize("rebalance", ["daily", "weekly"])
+def test_step_loop_matches_run_backtest(rebalance):
+    dates = pd.bdate_range("2026-06-15", "2026-06-26")  # business days, Mon-start
+    prices = [100, 102, 101, 105, 108, 107, 110, 109, 112, 115][: len(dates)]
+    panel = _panel([d.isoformat() for d in dates], [float(p) for p in prices])
+    spec = _spec(rebalance)
+
+    bt = run_backtest(spec, panel, starting_cash=10_000.0)
+
+    indicators = compute_all(spec.indicators, panel.close)
+    s = PaperState.initial(10_000.0)  # flat, empty ts_state -> same start as backtest
+    paper_eq = []
+    for ts in panel.close.index:
+        s, _, eq = step(spec, s, panel, indicators, ts)
+        paper_eq.append(eq)
+
+    assert paper_eq == pytest.approx(list(bt.equity_curve.to_numpy()), rel=1e-9)
+```
+
+> Note: the paper loop here starts flat with empty `ts_state`, exactly as
+> `run_backtest` does at its first bar, so the comparison is apples-to-apples. The
+> H2 launch-stamp (Task 13) only affects which candles are *recorded*, not the
+> per-step math this test pins.
+
+- [ ] **Step 2: Run the test (no new production code)**
+
+Run: `.venv/Scripts/python.exe -m pytest tests/paper/test_equivalence.py -v`
+Expected: PASS for both params once Task 3's rebalance gate is in place. If the
+`weekly` case fails, `step()` is re-deciding on non-rebalance bars (the H1 bug).
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add tests/paper/test_equivalence.py
+git commit -m "test(paper): prove step() loop matches run_backtest for daily+weekly"
+```
+
+---
+
 ## Task 10: Service layer (spec resolution)
 
 **Files:**
@@ -1778,6 +1908,7 @@ from __future__ import annotations
 import asyncio
 import json
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -1835,7 +1966,13 @@ def create_paper_session(
         universe=universe,
         timeframe="1h",
         starting_cash=body.starting_cash,
-        state_json=PaperState.initial(body.starting_cash).to_json(),
+        # Stamp the high-water mark at launch so the first ticker cycle's lookback
+        # window warms indicators but is NOT recorded; only candles that close
+        # after launch are ticked/recorded. The ticker processes ts > this mark.
+        state_json=PaperState.initial(
+            body.starting_cash,
+            start_ts=datetime.now(timezone.utc).isoformat(),
+        ).to_json(),
     )
     session.commit()
     session.refresh(row)
@@ -2786,6 +2923,11 @@ git commit -m "docs(paper): document Surface D config and usage"
 
 **1. Spec coverage:**
 - Purpose / forward step reusing engine → Tasks 2, 3, 9.
+- "Behaves identically to a backtest" (incl. rebalance cadence) → Task 3 reuses the
+  public `is_rebalance_day` gate; Task 9b pins step-loop-vs-`run_backtest` equity
+  equality for both `daily` and `weekly`.
+- Forward-from-launch (lookback warms indicators, not recorded) → `PaperState.initial`
+  `start_ts` (Task 2) stamped at create time (Task 13).
 - Hourly cadence + backfill = same path → Task 8 (`catch_up_session` high-water mark).
 - Restart resume, no cleanup → Task 14 (guarded startup, no stale-marking).
 - Multiple concurrent sessions + shared fetch → Task 8 (`run_ticker_cycle` grouping).

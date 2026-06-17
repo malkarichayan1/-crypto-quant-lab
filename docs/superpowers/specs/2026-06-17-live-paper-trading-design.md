@@ -176,7 +176,9 @@ every CHECK_INTERVAL (default 60s):
 ### Data flow end to end
 
 `POST /paper-sessions` → row created `active` with initial `PaperState` (cash =
-starting_cash, empty positions, `last_processed_ts = null`), queue registered →
+starting_cash, empty positions, `last_processed_ts` **stamped to launch time** so the
+lookback window warms indicators but is not recorded — only candles closing after
+launch are ticked), queue registered →
 ticker picks it up next cycle → each processed candle persists a tick and emits an
 SSE event the live page consumes → `POST /paper-sessions/{id}/stop` flips status to
 `stopped`; ticker skips it.
@@ -342,9 +344,11 @@ npm packages — SSE via native `EventSource`.
   boundary.
 - **Duplicate / overlapping cycles.** `last_processed_ts` is a high-water mark; only
   `ts > last_processed_ts` is processed, so overlapping cycles never double-fill.
-- **Empty/short startup history.** A brand-new session with `last_processed_ts = null`
-  processes all available candles in the first fetch window up to now; this is just a
-  large first backfill.
+- **Empty/short startup history.** A brand-new session stamps `last_processed_ts` to
+  its launch time, so the first fetch window warms indicators over history but records
+  nothing before launch; the first recorded tick is the first candle that closes after
+  the session is created. (A session is only ever "backfilled" for downtime *after*
+  launch — see restart handling above.)
 
 ---
 
@@ -395,7 +399,10 @@ the network.
 - **Indicator warm-up.** A strategy with a 50-bar indicator needs ≥50 prior candles
   before its first valid signal. Mitigation: the first fetch pulls
   `PAPER_FETCH_LOOKBACK_BARS` of history; `ts_state`/indicator NaNs early are handled
-  by the existing engine exactly as in a backtest.
+  by the existing engine exactly as in a backtest. **`PAPER_FETCH_LOOKBACK_BARS` must
+  exceed the largest indicator period** or the first post-launch signal will be NaN;
+  since launch-stamping means none of that history is recorded, the lookback can be
+  generous without polluting the recorded curve.
 - **Long offline backfill.** Days offline → many hourly candles to replay. Bounded by
   the fetch `limit` pagination already in `fetch_ohlcv_paginated`; replay is pure CPU
   and fast. Persisted per-candle so it is resumable.
