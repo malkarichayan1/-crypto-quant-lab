@@ -1,0 +1,195 @@
+import { useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { Lock, Star } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
+import { cn } from '@/lib/utils'
+import { getAssetCandles, getMarketAssets } from '../api/market'
+import { useWatchlist } from '../hooks/useWatchlist'
+import { CoinIcon } from '../components/CoinIcon'
+import { PriceChart } from '../components/PriceChart'
+import { StalePricesBanner } from '../components/StalePricesBanner'
+import { formatPct, formatUsd } from '../lib/format'
+import type { TimeRange } from '../types'
+
+const RANGES: TimeRange[] = ['1D', '1W', '1M', '3M', '1Y']
+const POLL_INTERVAL_MS = 30_000
+
+export function AssetPage() {
+  const { symbol: rawSymbol } = useParams()
+  const symbol = (rawSymbol ?? '').toUpperCase()
+  const [range, setRange] = useState<TimeRange>('1D')
+  const [isProView, setIsProView] = useState(false)
+  const { starred, toggle } = useWatchlist()
+
+  const assetsQuery = useQuery({
+    queryKey: ['market-assets'],
+    queryFn: getMarketAssets,
+    refetchInterval: POLL_INTERVAL_MS,
+  })
+  const candlesQuery = useQuery({
+    queryKey: ['asset-candles', symbol, range],
+    queryFn: () => getAssetCandles(symbol, range),
+    enabled: symbol.length > 0,
+    refetchInterval: POLL_INTERVAL_MS,
+  })
+
+  const quote = assetsQuery.data?.assets.find((a) => a.symbol === symbol)
+
+  if (assetsQuery.isSuccess && !quote) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
+        <p className="text-sm text-muted-foreground">
+          We couldn't find that coin.
+        </p>
+        <Button asChild variant="outline">
+          <Link to="/markets">Back to Markets</Link>
+        </Button>
+      </div>
+    )
+  }
+
+  const isPositive = (quote?.change_24h_pct ?? 0) >= 0
+  const isStarred = starred.has(symbol)
+
+  return (
+    <div>
+      {(assetsQuery.data?.stale || candlesQuery.data?.stale) && <StalePricesBanner />}
+
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <CoinIcon symbol={symbol} className="size-11" />
+          <div>
+            {quote ? (
+              <p className="text-lg font-semibold">{quote.name}</p>
+            ) : (
+              <Skeleton className="h-6 w-28" />
+            )}
+            <p className="text-xs text-muted-foreground">{symbol}</p>
+          </div>
+          <button
+            type="button"
+            aria-label={
+              isStarred
+                ? `Remove ${symbol} from watchlist`
+                : `Add ${symbol} to watchlist`
+            }
+            onClick={() => toggle(symbol)}
+            className="rounded-md p-1.5 transition-colors duration-200 hover:bg-accent"
+          >
+            <Star
+              className={cn(
+                'size-5',
+                isStarred ? 'fill-watch text-watch' : 'text-muted-foreground',
+              )}
+              aria-hidden="true"
+            />
+          </button>
+        </div>
+        <div className="text-right">
+          {quote ? (
+            <>
+              <p className="text-3xl font-bold tabular-nums">{formatUsd(quote.price)}</p>
+              <p
+                className={cn(
+                  'text-sm tabular-nums',
+                  isPositive ? 'text-profit' : 'text-loss',
+                )}
+              >
+                {formatPct(quote.change_24h_pct)} today
+              </p>
+            </>
+          ) : (
+            <Skeleton className="h-10 w-40" />
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div>
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex gap-1">
+              {RANGES.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  aria-pressed={range === r}
+                  onClick={() => setRange(r)}
+                  className={cn(
+                    'rounded-full px-3 py-1 text-xs font-medium transition-colors duration-200',
+                    range === r
+                      ? 'bg-primary/15 text-primary'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                  )}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              Pro view
+              <Switch
+                aria-label="Pro view"
+                checked={isProView}
+                onCheckedChange={setIsProView}
+              />
+            </label>
+          </div>
+
+          {candlesQuery.isLoading ? (
+            <Skeleton className="h-[360px] w-full rounded-xl" />
+          ) : (
+            <PriceChart
+              candles={candlesQuery.data?.candles ?? []}
+              mode={isProView ? 'pro' : 'line'}
+            />
+          )}
+
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground">24h high</p>
+                <p className="mt-1 text-sm font-medium tabular-nums">
+                  {quote ? formatUsd(quote.high_24h) : '—'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground">24h low</p>
+                <p className="mt-1 text-sm font-medium tabular-nums">
+                  {quote ? formatUsd(quote.low_24h) : '—'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground">24h volume</p>
+                <p className="mt-1 text-sm font-medium tabular-nums">
+                  {quote ? formatUsd(quote.volume_24h) : '—'}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        <Card className="h-fit">
+          <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
+            <div className="flex size-12 items-center justify-center rounded-xl border border-border bg-secondary">
+              <Lock className="size-5 text-muted-foreground" aria-hidden="true" />
+            </div>
+            <p className="text-sm font-medium">Trading opens soon</p>
+            <p className="text-xs text-muted-foreground">
+              Buying and selling with your practice portfolio arrives in the next
+              update. Until then, explore the chart and star coins you want to
+              track.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
