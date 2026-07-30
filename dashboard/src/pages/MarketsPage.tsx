@@ -60,7 +60,7 @@ export function MarketsPage() {
         </div>
       )}
 
-      {isError && (
+      {isError && !data && (
         <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-center">
           <p className="text-sm text-muted-foreground">
             We couldn't load market data.
@@ -71,7 +71,7 @@ export function MarketsPage() {
         </div>
       )}
 
-      {!isLoading && !isError && (
+      {!isLoading && data && (
         <div className="flex flex-col gap-1">
           {rows.map((asset) => (
             <AssetRow

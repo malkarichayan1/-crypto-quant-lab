@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -21,13 +21,14 @@ function quote(symbol: string, name: string, price: number, change = 0.01): Asse
 
 function renderPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
+  const view = render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
         <MarketsPage />
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  return { ...view, qc }
 }
 
 describe('MarketsPage', () => {
@@ -82,5 +83,18 @@ describe('MarketsPage', () => {
     renderPage()
     expect(await screen.findByText(/couldn't load market data/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument()
+  })
+
+  it('keeps showing existing data when a background refetch fails', async () => {
+    const { qc } = renderPage()
+    await screen.findByText('Bitcoin')
+
+    vi.mocked(marketApi.getMarketAssets).mockRejectedValueOnce(new Error('network blip'))
+    await qc.refetchQueries({ queryKey: ['market-assets'] }).catch(() => {})
+
+    await waitFor(() => {
+      expect(screen.getByText('Bitcoin')).toBeInTheDocument()
+    })
+    expect(screen.queryByText(/couldn't load market data/i)).not.toBeInTheDocument()
   })
 })
