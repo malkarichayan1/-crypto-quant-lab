@@ -1,0 +1,68 @@
+@import 'tailwindcss';
+
+/* ---- Palette (spec §6): dark-only, defined on :root ---- */
+:root {
+  --background: #0f1117;
+  --foreground: #f2f4f8;
+  --card: #161925;
+  --card-foreground: #f2f4f8;
+  --popover: #161925;
+  --popover-foreground: #f2f4f8;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #1a2030;
+  --secondary-foreground: #f2f4f8;
+  --muted: #1a2030;
+  --muted-foreground: #8b93a7;
+  --accent: #1a2030;
+  --accent-foreground: #f2f4f8;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #232838;
+  --input: #232838;
+  --ring: #3b82f6;
+  --radius: 0.875rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@theme {
+  --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Semantic finance accents (spec §6) */
+  --color-profit: #22c55e;
+  --color-loss: #ef4444;
+  --color-watch: #f59e0b;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background font-sans text-foreground;
+  }
+}
