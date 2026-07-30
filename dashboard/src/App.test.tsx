@@ -26,9 +26,17 @@ describe('App routing', () => {
     expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
   })
 
-  it('renders placeholders for the other beginner routes', () => {
+  it('renders the Markets page at /markets', () => {
     renderAt('/markets')
     expect(screen.getByRole('heading', { name: 'Markets' })).toBeInTheDocument()
+  })
+
+  it('renders the trade view at /coins/:symbol', () => {
+    renderAt('/coins/BTC')
+    // AssetPage renders "BTC" in two places while loading — the CoinIcon
+    // badge (a div) and the symbol subtitle (a <p>) — so scope the query to
+    // the <p> to avoid a "multiple elements" match.
+    expect(screen.getByText('BTC', { selector: 'p' })).toBeInTheDocument()
   })
 
   it('redirects legacy /paper to /lab/paper (Paper Sessions nav becomes active)', async () => {

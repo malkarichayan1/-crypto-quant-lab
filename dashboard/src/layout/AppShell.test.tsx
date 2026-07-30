@@ -1,24 +1,27 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppShell } from './AppShell'
 
-function renderAt(path: string) {
-  return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route element={<AppShell />}>
-          <Route path="/" element={<p>routed content</p>} />
-          <Route path="/lab/:section" element={<p>lab content</p>} />
-        </Route>
-      </Routes>
-    </MemoryRouter>,
-  )
-}
-
 describe('AppShell', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
+  })
+
   it('renders top bar, sidebar, and routed content', () => {
-    renderAt('/')
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={['/']}>
+          <Routes>
+            <Route element={<AppShell />}>
+              <Route path="/" element={<p>routed content</p>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
     expect(screen.getByText('HedgeFund Sim')).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
     expect(screen.getByText('routed content')).toBeInTheDocument()
@@ -26,13 +29,37 @@ describe('AppShell', () => {
   })
 
   it('does not apply legacy-scope on non-lab routes', () => {
-    renderAt('/')
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={['/']}>
+          <Routes>
+            <Route element={<AppShell />}>
+              <Route path="/" element={<p>routed content</p>} />
+              <Route path="/lab/:section" element={<p>lab content</p>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
     const content = screen.getByText('routed content')
     expect(content.closest('.legacy-scope')).not.toBeInTheDocument()
   })
 
   it('applies legacy-scope on /lab/* routes', () => {
-    renderAt('/lab/backtests')
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={['/lab/backtests']}>
+          <Routes>
+            <Route element={<AppShell />}>
+              <Route path="/" element={<p>routed content</p>} />
+              <Route path="/lab/:section" element={<p>lab content</p>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
     const content = screen.getByText('lab content')
     expect(content.closest('.legacy-scope')).toBeInTheDocument()
   })

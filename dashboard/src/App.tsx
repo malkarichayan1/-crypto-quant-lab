@@ -1,15 +1,10 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import {
-  CandlestickChart,
-  LayoutDashboard,
-  Newspaper,
-  Settings,
-  Trophy,
-  Wallet,
-} from 'lucide-react'
+import { LayoutDashboard, Newspaper, Settings, Trophy, Wallet } from 'lucide-react'
 import { AppShell } from './layout/AppShell'
 import { ComingSoon } from './components/ComingSoon'
 import { RedirectWithParams } from './components/RedirectWithParams'
+import { MarketsPage } from './pages/MarketsPage'
+import { AssetPage } from './pages/AssetPage'
 import { NewRunPage } from './pages/NewRunPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { ResultPage } from './pages/ResultPage'
@@ -37,16 +32,8 @@ export default function App() {
             />
           }
         />
-        <Route
-          path="/markets"
-          element={
-            <ComingSoon
-              icon={CandlestickChart}
-              title="Markets"
-              description="Browse and search every tradeable coin with live prices and sparklines. Coming in Phase 2."
-            />
-          }
-        />
+        <Route path="/markets" element={<MarketsPage />} />
+        <Route path="/coins/:symbol" element={<AssetPage />} />
         <Route
           path="/portfolio"
           element={
