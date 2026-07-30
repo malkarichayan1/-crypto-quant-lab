@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatPct, formatNum, signClass, METRIC_LABELS } from './format'
+import { formatPct, formatNum, signClass, METRIC_LABELS, formatUsd } from './format'
 
 describe('formatPct', () => {
   it('renders a fraction as a signed percentage', () => {
@@ -25,5 +25,13 @@ describe('signClass', () => {
 describe('METRIC_LABELS', () => {
   it('maps the sharpe key to a human label', () => {
     expect(METRIC_LABELS.sharpe).toBe('Sharpe')
+  })
+})
+
+describe('formatUsd', () => {
+  it('formats dollars with grouping and two decimals', () => {
+    expect(formatUsd(1234.5)).toBe('$1,234.50')
+    expect(formatUsd(0)).toBe('$0.00')
+    expect(formatUsd(-50)).toBe('-$50.00')
   })
 })
