@@ -11,3 +11,5 @@ hedgefund.egg-info/
 .env
 dashboard/node_modules
 dashboard/dist
+*.tsbuildinfo
+*.code-workspace

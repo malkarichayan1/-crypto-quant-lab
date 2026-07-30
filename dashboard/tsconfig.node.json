@@ -1,6 +1,10 @@
 {
   "compilerOptions": {
     "composite": true,
+    // composite forbids noEmit, so send the emit somewhere already ignored:
+    // a compiled vite.config.js beside the .ts would take resolution priority.
+    "outDir": "./node_modules/.tmp/tsconfig-node",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig-node.tsbuildinfo",
     "skipLibCheck": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
