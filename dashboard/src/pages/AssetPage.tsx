@@ -30,14 +30,32 @@ export function AssetPage() {
     queryFn: getMarketAssets,
     refetchInterval: POLL_INTERVAL_MS,
   })
+  const quote = assetsQuery.data?.assets.find((a) => a.symbol === symbol)
+  // Once assets have loaded at least once, we know whether `symbol` is a
+  // real coin. If it isn't, stop fetching/polling candles for it — the
+  // backend 404s deterministically and there's nothing to recover.
   const candlesQuery = useQuery({
     queryKey: ['asset-candles', symbol, range],
     queryFn: () => getAssetCandles(symbol, range),
-    enabled: symbol.length > 0,
+    enabled: symbol.length > 0 && (assetsQuery.data === undefined || Boolean(quote)),
     refetchInterval: POLL_INTERVAL_MS,
   })
 
-  const quote = assetsQuery.data?.assets.find((a) => a.symbol === symbol)
+  // No data at all (first load failed, no cache to fall back on) — show a
+  // full-page error with retry. A background refetch failure once we already
+  // have data is handled silently below (existing content just keeps showing).
+  if (assetsQuery.isError && !assetsQuery.data) {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-center">
+        <p className="text-sm text-muted-foreground">
+          We couldn't load this coin's data.
+        </p>
+        <Button variant="outline" onClick={() => assetsQuery.refetch()}>
+          Try again
+        </Button>
+      </div>
+    )
+  }
 
   if (assetsQuery.isSuccess && !quote) {
     return (
@@ -141,6 +159,15 @@ export function AssetPage() {
 
           {candlesQuery.isLoading ? (
             <Skeleton className="h-[360px] w-full rounded-xl" />
+          ) : candlesQuery.isError && !candlesQuery.data ? (
+            <div className="flex h-[360px] flex-col items-center justify-center gap-3 rounded-xl border border-border text-center">
+              <p className="text-sm text-muted-foreground">
+                We couldn't load the chart.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => candlesQuery.refetch()}>
+                Try again
+              </Button>
+            </div>
           ) : (
             <PriceChart
               candles={candlesQuery.data?.candles ?? []}

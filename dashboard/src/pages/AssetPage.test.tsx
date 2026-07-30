@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -17,7 +17,7 @@ vi.mock('../components/PriceChart', () => ({
 
 function renderAt(path: string) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
+  const view = render(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
@@ -26,6 +26,7 @@ function renderAt(path: string) {
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  return { ...view, qc }
 }
 
 describe('AssetPage', () => {
@@ -76,5 +77,77 @@ describe('AssetPage', () => {
       'href',
       '/markets',
     )
+  })
+
+  it('shows an error state with retry when assets fail to load, and recovers on retry', async () => {
+    vi.mocked(marketApi.getMarketAssets).mockReset()
+    vi.mocked(marketApi.getMarketAssets)
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValueOnce({
+        assets: [{
+          symbol: 'BTC', name: 'Bitcoin', price: 64231.5, change_24h_pct: 0.0231,
+          high_24h: 65000, low_24h: 63000, volume_24h: 1_000_000,
+          sparkline: [63000, 64231.5],
+        }],
+        stale: false,
+        as_of: '2026-07-30T12:00:00Z',
+      })
+
+    renderAt('/coins/BTC')
+    expect(await screen.findByText(/couldn't load this coin/i)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /try again/i }))
+    expect(await screen.findByText('Bitcoin')).toBeInTheDocument()
+  })
+
+  it('keeps showing existing data when a background assets refetch fails', async () => {
+    const { qc } = renderAt('/coins/BTC')
+    await screen.findByText('Bitcoin')
+
+    vi.mocked(marketApi.getMarketAssets).mockRejectedValueOnce(new Error('blip'))
+    await qc.refetchQueries({ queryKey: ['market-assets'] }).catch(() => {})
+
+    await waitFor(() => {
+      expect(screen.getByText('Bitcoin')).toBeInTheDocument()
+    })
+    expect(screen.queryByText(/couldn't load this coin/i)).not.toBeInTheDocument()
+  })
+
+  it('shows a chart error state with retry when candles fail to load', async () => {
+    vi.mocked(marketApi.getAssetCandles).mockReset()
+    vi.mocked(marketApi.getAssetCandles)
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValueOnce({
+        symbol: 'BTC', range: '1D', stale: false,
+        candles: [{ ts: '2026-07-30T00:00:00Z', open: 1, high: 2, low: 0.5, close: 1.5, volume: 10 }],
+      })
+
+    renderAt('/coins/BTC')
+    await screen.findByText('Bitcoin')
+    expect(await screen.findByText(/couldn't load the chart/i)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /try again/i }))
+    expect(await screen.findByTestId('price-chart')).toBeInTheDocument()
+  })
+
+  it('stops polling candles once the symbol is confirmed invalid', async () => {
+    // shouldAdvanceTime keeps the fake clock ticking in near-real-time so
+    // RTL's findBy* (which polls via real setTimeout) keeps working, while
+    // still letting us jump the clock forward deterministically below.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      renderAt('/coins/ZZZ')
+      await screen.findByText(/couldn't find that coin/i)
+
+      const callsAfterSettled = vi.mocked(marketApi.getAssetCandles).mock.calls.length
+
+      // Jump well past the 30s poll interval — a still-enabled query would
+      // have fired at least one more request in that window.
+      await vi.advanceTimersByTimeAsync(35_000)
+
+      expect(marketApi.getAssetCandles).toHaveBeenCalledTimes(callsAfterSettled)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
