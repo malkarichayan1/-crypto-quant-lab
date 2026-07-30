@@ -40,8 +40,11 @@ def sharpe(equity: pd.Series, periods_per_year: int = PERIODS_PER_YEAR) -> float
 def sortino(equity: pd.Series, periods_per_year: int = PERIODS_PER_YEAR) -> float:
     r = returns(equity)
     downside = r[r < 0]
+    # An empty downside series has a NaN std, which slips past a `== 0` guard.
+    if r.empty or downside.empty:
+        return 0.0
     dd = downside.std(ddof=0)
-    if r.empty or dd == 0:
+    if dd == 0:
         return 0.0
     return float((r.mean() / dd) * np.sqrt(periods_per_year))
 
@@ -126,6 +129,17 @@ def information_ratio(
     return float((active.mean() / sd) * np.sqrt(periods_per_year))
 
 
+def _json_safe(value: float) -> float:
+    """Coerce a non-finite metric to 0.0.
+
+    JSON has no NaN or Infinity literal, so a JSONB column rejects them
+    outright. Degenerate curves leave some ratios mathematically undefined;
+    reporting 0.0 matches how the individual metric functions already treat
+    their own undefined cases.
+    """
+    return float(value) if np.isfinite(value) else 0.0
+
+
 def summarize(
     equity: pd.Series,
     periods_per_year: int = PERIODS_PER_YEAR,
@@ -148,4 +162,4 @@ def summarize(
         out["alpha"] = alpha(r, rb, periods_per_year)
         out["tracking_error"] = tracking_error(r, rb, periods_per_year)
         out["information_ratio"] = information_ratio(r, rb, periods_per_year)
-    return out
+    return {key: _json_safe(val) for key, val in out.items()}
