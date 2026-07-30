@@ -1,26 +1,15 @@
 import uuid
 from datetime import datetime, timezone
 
-import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from hedgefund.api.db.models import Base
 from hedgefund.api.db.paper_repository import PaperRepository
 
-TEST_DB = "postgresql+psycopg://hedgefund:hedgefund@localhost:5432/hedgefund_test"
-
-
-@pytest.fixture
-def session():
-    engine = create_engine(TEST_DB)
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    s = Session()
-    yield s
-    s.rollback()
-    s.close()
-    Base.metadata.drop_all(engine)
+# `session` comes from tests/api/conftest.py: a transaction-scoped fixture bound
+# to the suite's shared engine, rolled back after each test. This file used to
+# define its own session fixture that ran Base.metadata.create_all/drop_all
+# against a fresh engine per test — since Base.metadata is shared process-wide,
+# that drop_all wiped out every table for the rest of the pytest session as
+# soon as this file's tests ran, breaking unrelated test files depending on
+# collection order. Reusing the shared fixture avoids that.
 
 
 def _spec_json():

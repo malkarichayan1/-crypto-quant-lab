@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select, update as sa_update
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from hedgefund.api.db.paper_models import PaperEquityRow, PaperSessionRow, PaperTradeRow
@@ -89,22 +89,23 @@ class PaperRepository:
                 is_catchup=is_catchup,
             ))
         self._s.add(PaperEquityRow(id=uuid.uuid4(), session_id=session_id, ts=ts, equity=equity))
-        self._s.execute(
-            sa_update(PaperSessionRow)
-            .where(PaperSessionRow.id == session_id)
-            .values(state_json=state_json, last_processed_ts=ts)
-        )
+        # Load + mutate (not a bulk UPDATE): a Core-style bulk update bypasses the
+        # ORM identity map, and with expire_on_commit=False (production's
+        # SessionLocal) an already-loaded PaperSessionRow would keep showing
+        # pre-update values afterward.
+        row = self._s.get(PaperSessionRow, session_id)
+        if row is not None:
+            row.state_json = state_json
+            row.last_processed_ts = ts
 
     def stop_session(self, session_id: uuid.UUID) -> None:
-        self._s.execute(
-            sa_update(PaperSessionRow)
-            .where(PaperSessionRow.id == session_id)
-            .values(status="stopped", stopped_at=datetime.now(timezone.utc))
-        )
+        row = self._s.get(PaperSessionRow, session_id)
+        if row is not None:
+            row.status = "stopped"
+            row.stopped_at = datetime.now(timezone.utc)
 
     def set_error(self, session_id: uuid.UUID, message: str) -> None:
-        self._s.execute(
-            sa_update(PaperSessionRow)
-            .where(PaperSessionRow.id == session_id)
-            .values(status="error", error=message)
-        )
+        row = self._s.get(PaperSessionRow, session_id)
+        if row is not None:
+            row.status = "error"
+            row.error = message
