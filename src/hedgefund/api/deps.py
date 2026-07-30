@@ -27,3 +27,21 @@ def get_call_llm() -> CallLLM:
     Override in tests via app.dependency_overrides[get_call_llm].
     """
     return _call_llm
+
+
+_market_data = None
+
+
+def get_market_data():
+    """Singleton MarketDataCache over a real ccxt binance instance.
+
+    Overridden in tests via app.dependency_overrides.
+    """
+    global _market_data
+    if _market_data is None:
+        import ccxt  # local import: only needed when serving live market data
+
+        from hedgefund.manual.market_data import MarketDataCache
+
+        _market_data = MarketDataCache(exchange=ccxt.binance())
+    return _market_data

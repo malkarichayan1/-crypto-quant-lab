@@ -46,7 +46,14 @@ def session(engine):
 
 
 @pytest.fixture
-def client(session):
+def market_data():
+    from tests.fixtures.market import FakeMarketData
+
+    return FakeMarketData()
+
+
+@pytest.fixture
+def client(session, market_data):
     app = create_app()
 
     def _override_session():
@@ -59,8 +66,11 @@ def client(session):
 
         return _load
 
+    from hedgefund.api.deps import get_market_data
+
     app.dependency_overrides[get_session] = _override_session
     app.dependency_overrides[get_panel_loader] = _override_loader
+    app.dependency_overrides[get_market_data] = lambda: market_data
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
