@@ -14,7 +14,7 @@ export default function App() {
   return (
     <>
       <NavBar />
-      <main className="container">
+      <main className="container legacy-scope">
         <Routes>
           <Route path="/" element={<NewRunPage />} />
           <Route path="/history" element={<HistoryPage />} />
