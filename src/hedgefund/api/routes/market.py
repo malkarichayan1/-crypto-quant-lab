@@ -11,6 +11,7 @@ from hedgefund.api.manual_schemas import (
 )
 from hedgefund.manual.market_data import (
     RANGE_SPECS,
+    MarketDataCache,
     PricesUnavailableError,
     UnknownSymbolError,
 )
@@ -21,7 +22,7 @@ _UNAVAILABLE_MSG = "Prices are temporarily unavailable — please try again shor
 
 
 @router.get("/assets", response_model=MarketAssetsResponse)
-def list_assets(market=Depends(get_market_data)) -> MarketAssetsResponse:
+def list_assets(market: MarketDataCache = Depends(get_market_data)) -> MarketAssetsResponse:
     try:
         snap = market.get_assets()
     except PricesUnavailableError:
@@ -37,7 +38,7 @@ def list_assets(market=Depends(get_market_data)) -> MarketAssetsResponse:
 def get_candles(
     symbol: str,
     range: str = Query("1D"),
-    market=Depends(get_market_data),
+    market: MarketDataCache = Depends(get_market_data),
 ) -> CandlesResponse:
     if range not in RANGE_SPECS:
         raise HTTPException(
