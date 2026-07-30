@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Bell, Hexagon, Search, User } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -12,6 +12,8 @@ const MAX_RESULTS = 5
 export function TopBar() {
   const [query, setQuery] = useState('')
   const navigate = useNavigate()
+  const location = useLocation()
+  const formRef = useRef<HTMLFormElement>(null)
   const { data } = useQuery({ queryKey: ['market-assets'], queryFn: getMarketAssets })
 
   const normalized = query.trim().toLowerCase()
@@ -24,11 +26,34 @@ export function TopBar() {
         )
         .slice(0, MAX_RESULTS)
     : []
+  const isOpen = matches.length > 0
 
   const select = (symbol: string) => {
     setQuery('')
     navigate(`/coins/${symbol}`)
   }
+
+  // TopBar is mounted once at the AppShell level, outside the <Outlet> that
+  // swaps per route, so it is never remounted on navigation. Without this,
+  // stale results from a search stay rendered over whatever page comes next
+  // when the user navigates away some other way (e.g. a Sidebar link).
+  useEffect(() => {
+    setQuery('')
+  }, [location.pathname])
+
+  // Close on outside click.
+  useEffect(() => {
+    if (!isOpen) return
+
+    function handlePointerDown(event: MouseEvent) {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        setQuery('')
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => document.removeEventListener('mousedown', handlePointerDown)
+  }, [isOpen])
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border bg-background/80 px-4 backdrop-blur">
@@ -38,6 +63,7 @@ export function TopBar() {
       </div>
 
       <form
+        ref={formRef}
         className="relative ml-4 hidden w-full max-w-xs md:block"
         onSubmit={(event) => {
           event.preventDefault()
@@ -55,10 +81,15 @@ export function TopBar() {
           placeholder="Search coins…"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') setQuery('')
+          }}
+          aria-expanded={isOpen}
           className="h-9 pl-9"
         />
-        {matches.length > 0 && (
+        {isOpen && (
           <div
+            role="listbox"
             aria-label="Search results"
             className="absolute left-0 right-0 top-11 z-50 overflow-hidden rounded-xl border border-border bg-popover shadow-lg"
           >
@@ -66,6 +97,8 @@ export function TopBar() {
               <button
                 key={asset.symbol}
                 type="button"
+                role="option"
+                aria-selected={false}
                 onClick={() => select(asset.symbol)}
                 className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors duration-200 hover:bg-accent"
               >
