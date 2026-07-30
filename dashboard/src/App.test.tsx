@@ -44,4 +44,11 @@ describe('App routing', () => {
       await screen.findByRole('link', { name: /backtests/i }),
     ).toHaveAttribute('aria-current', 'page')
   })
+
+  it('preserves the query string when redirecting legacy /paper to /lab/paper', async () => {
+    renderAt('/paper?source_backtest_id=abc-123')
+    // PaperStartPage reads source_backtest_id from the URL to prefill the form.
+    // If the redirect dropped the query string, this prefill notice would never appear.
+    expect(await screen.findByText('From backtest abc-123')).toBeInTheDocument()
+  })
 })

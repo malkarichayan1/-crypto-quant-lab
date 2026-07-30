@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import {
   CandlestickChart,
   LayoutDashboard,
@@ -21,6 +21,7 @@ import { PaperHistoryPage } from './pages/PaperHistoryPage'
 import { PaperLivePage } from './pages/PaperLivePage'
 
 export default function App() {
+  const location = useLocation()
   return (
     <Routes>
       <Route element={<AppShell />}>
@@ -104,7 +105,10 @@ export default function App() {
         <Route path="/research" element={<Navigate to="/lab/research" replace />} />
         <Route path="/research/history" element={<Navigate to="/lab/research/history" replace />} />
         <Route path="/research/runs/:id" element={<RedirectWithParams to="/lab/research/runs/:id" />} />
-        <Route path="/paper" element={<Navigate to="/lab/paper" replace />} />
+        <Route
+          path="/paper"
+          element={<Navigate to={{ pathname: '/lab/paper', search: location.search }} replace />}
+        />
         <Route path="/paper/history" element={<Navigate to="/lab/paper/history" replace />} />
         <Route path="/paper/sessions/:id" element={<RedirectWithParams to="/lab/paper/sessions/:id" />} />
       </Route>
