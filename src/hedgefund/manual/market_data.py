@@ -143,7 +143,11 @@ class MarketDataCache:
         self._quote_ttl = quote_ttl
         self._candle_ttl = candle_ttl
         self._clock = clock
-        self._lock = threading.Lock()
+        # Separate locks: assets and candles are independent caches with no
+        # shared invariant, so a slow quotes refresh (up to 20 sequential
+        # ccxt calls) shouldn't block unrelated, already-cached candle reads.
+        self._assets_lock = threading.Lock()
+        self._candles_lock = threading.Lock()
         self._assets: AssetsSnapshot | None = None
         self._assets_at = 0.0
         self._candles: dict[tuple[str, str], tuple[CandleSeries, float]] = {}
@@ -155,7 +159,7 @@ class MarketDataCache:
             raise UnknownSymbolError(symbol) from None
 
     def get_assets(self) -> AssetsSnapshot:
-        with self._lock:
+        with self._assets_lock:
             now = self._clock()
             if self._assets is not None and now - self._assets_at < self._quote_ttl:
                 return self._assets
@@ -181,7 +185,7 @@ class MarketDataCache:
         pair = self.pair_for(symbol)
         timeframe, bars = RANGE_SPECS[range_key]
         key = (symbol, range_key)
-        with self._lock:
+        with self._candles_lock:
             now = self._clock()
             cached = self._candles.get(key)
             if cached is not None and now - cached[1] < self._candle_ttl:
