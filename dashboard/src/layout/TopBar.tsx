@@ -14,7 +14,13 @@ export function TopBar() {
           className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
           aria-hidden="true"
         />
-        <Input disabled placeholder="Search coins…" className="h-9 pl-9" />
+        <Input
+          id="global-search"
+          name="search"
+          disabled
+          placeholder="Search coins…"
+          className="h-9 pl-9"
+        />
       </div>
 
       <div className="ml-auto flex items-center gap-4">
