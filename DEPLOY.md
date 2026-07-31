@@ -23,7 +23,7 @@ Backend on Render, Postgres on Neon, frontend on Vercel. Written after the first
    - `DATABASE_URL` — the Neon connection string from step 1 (with the `+psycopg` driver prefix).
    - `CORS_ORIGINS` — leave blank for now; you'll set this after step 3 (Vercel) once you know the frontend's URL. Until then, only `http://localhost:5173` will be allowed to call the API.
    - `ANTHROPIC_API_KEY` — optional. Only needed if you want the LLM-backed "Research"/agent features to work; the rest of the app functions without it.
-4. Deploy. `render.yaml`'s `preDeployCommand` runs `alembic upgrade head` automatically before each deploy. **If your Render plan doesn't support pre-deploy commands** (this has been a paid-tier-only feature in the past — check Render's current docs for your plan), run migrations manually instead: open the service's "Shell" tab and run `alembic upgrade head`, or run it from your own machine with `DATABASE_URL` set to the Neon connection string.
+4. Deploy. `render.yaml`'s `startCommand` runs `alembic upgrade head` before launching uvicorn on every start (Render's free tier doesn't support a separate pre-deploy command step, so migrations are chained into the start command instead — `alembic upgrade head` is idempotent, so this is a safe no-op once the DB is already current).
 5. Once live, note the service URL (`https://hedgefund-api-xxxx.onrender.com` or similar) and confirm `https://<that-url>/health` returns `{"status": "ok"}`.
 
 ### 3. Vercel (frontend)
