@@ -1,6 +1,6 @@
 # Deploying HedgeFund Simulator
 
-Backend on Render, Postgres on Neon, frontend on Vercel. Written after the first deploy of the `feature/beginner-frontend-redesign` branch; update this file if the setup changes.
+Backend on Render, Postgres on Neon, frontend on Vercel, deployed from `main`. Written after the first deploy; update this file if the setup changes.
 
 ## Why this stack
 
@@ -18,7 +18,7 @@ Backend on Render, Postgres on Neon, frontend on Vercel. Written after the first
 ### 2. Render (backend)
 
 1. Create a Render account, connect your GitHub account.
-2. "New" → "Blueprint" → select this repo (`malkarichayan1/-crypto-quant-lab`) → branch `feature/beginner-frontend-redesign`. Render reads `render.yaml` at the repo root and proposes the `hedgefund-api` web service.
+2. "New" → "Blueprint" → select this repo (`malkarichayan1/-crypto-quant-lab`) → branch `main`. Render reads `render.yaml` at the repo root and proposes the `hedgefund-api` web service.
 3. Fill in the env vars Render prompts for (marked `sync: false` in `render.yaml`, so they're not committed to git):
    - `DATABASE_URL` — the Neon connection string from step 1 (with the `+psycopg` driver prefix).
    - `CORS_ORIGINS` — leave blank for now; you'll set this after step 3 (Vercel) once you know the frontend's URL. Until then, only `http://localhost:5173` will be allowed to call the API.
