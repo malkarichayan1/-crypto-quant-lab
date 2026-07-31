@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiFetch } from './client'
+import { API_BASE_URL } from './config'
 import type {
   CreatePaperSessionRequest,
   PaperSessionDetail,
@@ -7,7 +8,6 @@ import type {
   PaperSSEEvent,
 } from '../types'
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 const BASE = '/paper-sessions'
 
 export function listPaperSessions(): Promise<PaperSessionSummary[]> {
@@ -39,7 +39,7 @@ export function usePaperSessionEvents(sessionId: string | undefined): {
 
   useEffect(() => {
     if (!sessionId) return
-    const es = new EventSource(`${BASE_URL}${BASE}/${sessionId}/events`)
+    const es = new EventSource(`${API_BASE_URL}${BASE}/${sessionId}/events`)
     setConnected(true)
     const onTick = (e: MessageEvent) =>
       setEvents((prev) => [...prev, JSON.parse(e.data) as PaperSSEEvent])

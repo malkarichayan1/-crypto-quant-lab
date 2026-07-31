@@ -14,10 +14,12 @@ from hedgefund.api.routes.watchlist import router as watchlist_router
 
 
 def create_app() -> FastAPI:
+    from hedgefund.api.config import get_settings
+
     app = FastAPI(title="HedgeFund Simulator API", version="0.1.0")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173"],
+        allow_origins=get_settings().cors_origins,
         allow_methods=["*"],
         allow_headers=["*"],
     )

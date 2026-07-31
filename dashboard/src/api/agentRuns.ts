@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { apiFetch } from './client'
+import { API_BASE_URL } from './config'
 import type {
   AgentRunDetail,
   AgentRunSummary,
   CreateAgentRunRequest,
   SSEEvent,
 } from '../types'
-
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 export function listAgentRuns(): Promise<AgentRunSummary[]> {
   return apiFetch<AgentRunSummary[]>('/agent-runs')
@@ -39,7 +38,7 @@ export function useAgentRunEvents(runId: string | undefined): AgentRunEventsStat
 
   useEffect(() => {
     if (!runId) return
-    const es = new EventSource(`${BASE_URL}/agent-runs/${runId}/events`)
+    const es = new EventSource(`${API_BASE_URL}/agent-runs/${runId}/events`)
     esRef.current = es
     setConnected(true)
 
