@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import uuid
+import zlib
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from hedgefund.api.db.manual_models import (
@@ -12,6 +13,13 @@ from hedgefund.api.db.manual_models import (
     PortfolioRow,
     WatchlistRow,
 )
+
+# Fixed key for the Postgres transaction-scoped advisory lock that serializes
+# concurrent "bootstrap the first portfolio" attempts (see
+# get_or_create_active_portfolio below). Any stable int64 works; derived via
+# crc32 of a namespacing string purely so it doesn't collide by coincidence
+# with an advisory lock key used elsewhere.
+_PORTFOLIO_BOOTSTRAP_LOCK_KEY = zlib.crc32(b"hedgefund.manual.portfolio_bootstrap")
 
 
 class ManualRepository:
@@ -48,6 +56,34 @@ class ManualRepository:
         return row
 
     def get_or_create_active_portfolio(self, default_cash: float) -> PortfolioRow:
+        # Double-checked locking: the overwhelming majority of calls, forever
+        # after the very first request against a fresh database, find an
+        # existing portfolio here and return immediately without ever
+        # touching the lock. We only pay the lock's round-trip (and briefly
+        # hold it) on the rare path where none exists yet.
+        existing = self.get_active_portfolio()
+        if existing is not None:
+            return existing
+
+        # Serialize concurrent bootstrap attempts (e.g. a browser firing
+        # GET /portfolio and GET /portfolio/orders in parallel on first
+        # load, against an empty database) so two callers can't each see
+        # "no active portfolio" and both create one, orphaning the loser.
+        # Transaction-scoped: acquired here, released automatically on this
+        # session's next commit or rollback — no separate unlock needed.
+        #
+        # Deliberately NOT held for the rest of the caller's transaction:
+        # callers like get_portfolio_view() do further work (up to ~20
+        # sequential ccxt calls on a cold market-data cache) before their
+        # own commit. Locking only around this recheck-then-create keeps
+        # that unrelated work from serializing behind a single global lock
+        # once a portfolio already exists.
+        self._s.execute(
+            text("SELECT pg_advisory_xact_lock(:key)"),
+            {"key": _PORTFOLIO_BOOTSTRAP_LOCK_KEY},
+        )
+        # Recheck: another caller may have created one while we were
+        # blocked waiting for the lock.
         return self.get_active_portfolio() or self.create_portfolio(default_cash)
 
     def list_orders(self, portfolio_id: uuid.UUID) -> list[ManualOrderRow]:

@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import threading
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import delete, select
+from sqlalchemy.orm import sessionmaker
+
+from hedgefund.api.db.manual_models import PortfolioRow
 from hedgefund.api.db.manual_repository import ManualRepository
 
 
@@ -33,6 +38,83 @@ def test_portfolio_bootstrap_and_active_selection(session):
 
     second = repo.create_portfolio(starting_cash=50_000.0)
     assert repo.get_active_portfolio().id == second.id  # newest row wins
+
+
+def test_bootstrap_serializes_concurrent_callers_via_advisory_lock(engine):
+    """Two callers race to bootstrap the first portfolio on an empty table —
+    e.g. a browser firing GET /portfolio and GET /portfolio/orders in
+    parallel on first load. Without the advisory lock in
+    get_or_create_active_portfolio, both could see "no active portfolio" and
+    each create one, silently orphaning the loser.
+
+    This is deliberately NOT a wall-clock race between two threads hoping to
+    hit a narrow timing window (that approach was tried and found unreliable
+    in this environment: a fast local Postgres round-trip meant the first
+    caller's SELECT-then-INSERT-then-commit routinely completed before the
+    second caller's SELECT even ran, so the "race" never actually raced).
+    Instead, caller A bootstraps but deliberately withholds its commit, which
+    means it is still holding the transaction-scoped advisory lock. Caller B
+    is then started on a second thread and must DETERMINISTICALLY block
+    inside its own get_or_create_active_portfolio call — not probabilistically,
+    since pg_advisory_xact_lock blocks for as long as the lock is held,
+    however long that is — until A commits and releases it. That blocking
+    behavior is exactly the guarantee the fix relies on.
+    """
+    Session = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+    session_a = Session()
+    session_b = Session()
+    repo_a = ManualRepository(session_a)
+    repo_b = ManualRepository(session_b)
+
+    b_done = threading.Event()
+    portfolio_b_ids = []
+
+    def call_b() -> None:
+        portfolio_b = repo_b.get_or_create_active_portfolio(default_cash=100_000.0)
+        portfolio_b_ids.append(portfolio_b.id)
+        b_done.set()
+
+    try:
+        # A bootstraps first but does NOT commit yet — its transaction is
+        # still open, so it's still holding the advisory lock.
+        portfolio_a = repo_a.get_or_create_active_portfolio(default_cash=100_000.0)
+
+        thread_b = threading.Thread(target=call_b)
+        thread_b.start()
+
+        # B must still be blocked inside the lock acquisition while A's
+        # transaction is open — this is deterministic Postgres locking
+        # behavior, not a timing race.
+        assert not b_done.wait(timeout=1), (
+            "a second caller bootstrapped a portfolio while the first "
+            "caller's transaction (holding the lock) was still open — the "
+            "advisory lock is not actually serializing bootstrap attempts"
+        )
+
+        session_a.commit()  # releases A's transaction-scoped advisory lock
+
+        assert b_done.wait(timeout=5), (
+            "second caller never completed after the first released the lock"
+        )
+        thread_b.join(timeout=5)
+        session_b.commit()
+
+        assert portfolio_b_ids[0] == portfolio_a.id, (
+            "both callers must converge on the same bootstrapped portfolio, "
+            "not create two separate orphaned rows"
+        )
+        with Session() as verify:
+            remaining = verify.execute(select(PortfolioRow.id)).scalars().all()
+        assert len(remaining) == 1, "exactly one portfolio row should exist"
+    finally:
+        session_a.close()
+        session_b.close()
+        # This test commits on raw `engine` connections outside the
+        # rollback-per-test `session` fixture, so it must clean up after
+        # itself to avoid leaking a portfolio row into later tests.
+        with Session() as cleanup:
+            cleanup.execute(delete(PortfolioRow))
+            cleanup.commit()
 
 
 def test_orders_roundtrip(session):
