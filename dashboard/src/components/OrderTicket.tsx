@@ -162,7 +162,11 @@ export function OrderTicket({ symbol, price, cash, heldUnits }: Props) {
           </div>
         )}
 
-        {inlineError && <p className="text-xs text-loss">{inlineError}</p>}
+        {inlineError && (
+          <p className="text-xs text-loss" role="alert">
+            {inlineError}
+          </p>
+        )}
 
         <Button
           disabled={!canReview || mutation.isPending}
