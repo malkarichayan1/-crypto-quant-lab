@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 
 os.environ.setdefault("PAPER_TICKER_ENABLED", "0")
+os.environ.setdefault("MANUAL_EQUITY_SNAPSHOTS_ENABLED", "0")
 
 import pytest
 from fastapi.testclient import TestClient

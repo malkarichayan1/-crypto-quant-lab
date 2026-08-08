@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AssetQuoteOut(BaseModel):
@@ -42,3 +44,66 @@ class CandlesResponse(BaseModel):
 
 class WatchlistResponse(BaseModel):
     symbols: list[str]
+
+
+class PositionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    symbol: str
+    units: float
+    avg_cost: float
+    price: float
+    market_value: float
+    unrealized_pl: float
+    unrealized_pl_pct: float
+    change_24h_pl: float
+
+
+class PortfolioResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    portfolio_id: uuid.UUID
+    starting_cash: float
+    cash: float
+    positions: list[PositionOut]
+    equity: float
+    today_pl: float
+    total_return_pct: float
+    stale: bool
+    created_at: datetime
+
+
+class ManualOrderOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    symbol: str
+    side: str
+    usd_amount: float
+    units: float
+    fill_price: float
+    created_at: datetime
+
+
+class PlaceOrderRequest(BaseModel):
+    symbol: str
+    side: Literal["buy", "sell"]
+    usd_amount: float = Field(gt=0)
+
+
+class ResetPortfolioRequest(BaseModel):
+    starting_cash: float = Field(default=100_000.0, gt=0)
+
+
+class PortfolioCreatedResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    starting_cash: float
+    created_at: datetime
+
+
+class EquityPointOut(BaseModel):
+    ts: datetime
+    equity: float
+
+
+class EquitySeriesResponse(BaseModel):
+    range: str
+    points: list[EquityPointOut]
