@@ -1,10 +1,12 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Newspaper, Settings, Trophy, Wallet } from 'lucide-react'
+import { Newspaper, Settings, Trophy } from 'lucide-react'
 import { AppShell } from './layout/AppShell'
 import { ComingSoon } from './components/ComingSoon'
 import { RedirectWithParams } from './components/RedirectWithParams'
+import { DashboardPage } from './pages/DashboardPage'
 import { MarketsPage } from './pages/MarketsPage'
 import { AssetPage } from './pages/AssetPage'
+import { PortfolioPage } from './pages/PortfolioPage'
 import { NewRunPage } from './pages/NewRunPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { ResultPage } from './pages/ResultPage'
@@ -21,29 +23,10 @@ export default function App() {
     <Routes>
       <Route element={<AppShell />}>
         {/* Beginner surfaces — placeholders until Phases 2-5 */}
-        <Route
-          path="/"
-          element={
-            <ComingSoon
-              icon={LayoutDashboard}
-              title="Dashboard"
-              description="Your $100,000 practice portfolio is on its way. Markets and trading arrive in the next phases — the Strategy Lab is fully open in the meantime."
-              cta={{ to: '/lab/backtests', label: 'Explore the Strategy Lab' }}
-            />
-          }
-        />
+        <Route path="/" element={<DashboardPage />} />
         <Route path="/markets" element={<MarketsPage />} />
         <Route path="/coins/:symbol" element={<AssetPage />} />
-        <Route
-          path="/portfolio"
-          element={
-            <ComingSoon
-              icon={Wallet}
-              title="Portfolio"
-              description="Your positions, orders, and activity will live here once trading opens in Phase 3."
-            />
-          }
-        />
+        <Route path="/portfolio" element={<PortfolioPage />} />
         <Route
           path="/leaderboard"
           element={
@@ -70,7 +53,7 @@ export default function App() {
             <ComingSoon
               icon={Settings}
               title="Settings"
-              description="Portfolio reset, starting cash, and advisor controls arrive with trading in Phase 3."
+              description="Portfolio reset, starting cash, and advisor controls arrive in the final phase."
             />
           }
         />

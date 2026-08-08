@@ -39,6 +39,11 @@ describe('App routing', () => {
     expect(screen.getByText('BTC', { selector: 'p' })).toBeInTheDocument()
   })
 
+  it('renders the Portfolio page at /portfolio', () => {
+    renderAt('/portfolio')
+    expect(screen.getByRole('heading', { name: 'Portfolio' })).toBeInTheDocument()
+  })
+
   it('redirects legacy /paper to /lab/paper (Paper Sessions nav becomes active)', async () => {
     renderAt('/paper')
     expect(

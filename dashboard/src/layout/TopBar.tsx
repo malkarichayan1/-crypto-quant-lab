@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Bell, Hexagon, Search, User } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import { getMarketAssets } from '../api/market'
+import { getPortfolio } from '../api/portfolio'
 import { CoinIcon } from '../components/CoinIcon'
 import { formatUsd } from '../lib/format'
 
@@ -15,6 +17,12 @@ export function TopBar() {
   const location = useLocation()
   const formRef = useRef<HTMLFormElement>(null)
   const { data } = useQuery({ queryKey: ['market-assets'], queryFn: getMarketAssets })
+  const portfolioQuery = useQuery({
+    queryKey: ['portfolio'],
+    queryFn: getPortfolio,
+    refetchInterval: 30_000,
+  })
+  const portfolio = portfolioQuery.data
 
   const normalized = query.trim().toLowerCase()
   const matches = normalized
@@ -114,6 +122,25 @@ export function TopBar() {
       </form>
 
       <div className="ml-auto flex items-center gap-4">
+        {portfolio && (
+          <Link
+            to="/portfolio"
+            className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 sm:flex"
+          >
+            <span className="text-xs font-medium tabular-nums">
+              {formatUsd(portfolio.equity)}
+            </span>
+            <span
+              className={cn(
+                'text-xs tabular-nums',
+                portfolio.today_pl >= 0 ? 'text-profit' : 'text-loss',
+              )}
+            >
+              {portfolio.today_pl >= 0 ? '+' : ''}
+              {formatUsd(portfolio.today_pl)}
+            </span>
+          </Link>
+        )}
         <Bell className="size-4 text-muted-foreground" aria-hidden="true" />
         <div
           aria-label="Your profile"

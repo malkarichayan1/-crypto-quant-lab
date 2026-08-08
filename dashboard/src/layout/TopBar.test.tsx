@@ -5,8 +5,10 @@ import { Link, MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TopBar } from './TopBar'
 import * as marketApi from '../api/market'
+import * as portfolioApi from '../api/portfolio'
 
 vi.mock('../api/market')
+vi.mock('../api/portfolio')
 
 function Probe() {
   const { symbol } = useParams()
@@ -60,6 +62,11 @@ describe('TopBar', () => {
       ],
       stale: false,
       as_of: '2026-07-30T12:00:00Z',
+    })
+    vi.mocked(portfolioApi.getPortfolio).mockResolvedValue({
+      portfolio_id: 'p1', starting_cash: 100000, cash: 55000, positions: [],
+      equity: 87000, today_pl: 150, total_return_pct: -0.13,
+      stale: false, created_at: '2026-07-30T00:00:00Z',
     })
   })
 
@@ -138,5 +145,11 @@ describe('TopBar', () => {
     await userEvent.keyboard('{Escape}')
 
     expect(screen.queryByRole('option', { name: /bitcoin/i })).not.toBeInTheDocument()
+  })
+
+  it("shows the portfolio value chip with today's P/L", async () => {
+    renderBar()
+    expect(await screen.findByText('$87,000.00')).toBeInTheDocument()
+    expect(screen.getByText('+$150.00')).toBeInTheDocument()
   })
 })
