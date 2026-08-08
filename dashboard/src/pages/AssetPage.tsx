@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Lock, Star } from 'lucide-react'
+import { Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { getAssetCandles, getMarketAssets } from '../api/market'
+import { getPortfolio } from '../api/portfolio'
 import { useWatchlist } from '../hooks/useWatchlist'
 import { CoinIcon } from '../components/CoinIcon'
+import { OrderTicket } from '../components/OrderTicket'
 import { PriceChart } from '../components/PriceChart'
 import { StalePricesBanner } from '../components/StalePricesBanner'
 import { formatPct, formatUsd } from '../lib/format'
@@ -40,6 +42,12 @@ export function AssetPage() {
     enabled: symbol.length > 0 && (assetsQuery.data === undefined || Boolean(quote)),
     refetchInterval: POLL_INTERVAL_MS,
   })
+  const portfolioQuery = useQuery({
+    queryKey: ['portfolio'],
+    queryFn: getPortfolio,
+    refetchInterval: POLL_INTERVAL_MS,
+  })
+  const position = portfolioQuery.data?.positions.find((p) => p.symbol === symbol)
 
   // No data at all (first load failed, no cache to fall back on) — show a
   // full-page error with retry. A background refetch failure once we already
@@ -175,7 +183,7 @@ export function AssetPage() {
             />
           )}
 
-          <div className="mt-4 grid grid-cols-3 gap-3">
+          <div className="mt-4 grid grid-cols-4 gap-3">
             <Card>
               <CardContent className="p-4">
                 <p className="text-xs text-muted-foreground">24h high</p>
@@ -200,22 +208,27 @@ export function AssetPage() {
                 </p>
               </CardContent>
             </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground">You own</p>
+                <p className="mt-1 text-sm font-medium tabular-nums">
+                  {position ? formatUsd(position.market_value) : '$0.00'}
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
 
-        <Card className="h-fit">
-          <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
-            <div className="flex size-12 items-center justify-center rounded-xl border border-border bg-secondary">
-              <Lock className="size-5 text-muted-foreground" aria-hidden="true" />
-            </div>
-            <p className="text-sm font-medium">Trading opens soon</p>
-            <p className="text-xs text-muted-foreground">
-              Buying and selling with your practice portfolio arrives in the next
-              update. Until then, explore the chart and star coins you want to
-              track.
-            </p>
-          </CardContent>
-        </Card>
+        {quote && portfolioQuery.data ? (
+          <OrderTicket
+            symbol={symbol}
+            price={quote.price}
+            cash={portfolioQuery.data.cash}
+            heldUnits={position?.units ?? 0}
+          />
+        ) : (
+          <Skeleton className="h-72 w-full rounded-xl" />
+        )}
       </div>
     </div>
   )

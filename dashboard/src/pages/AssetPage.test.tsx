@@ -6,9 +6,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AssetPage } from './AssetPage'
 import * as marketApi from '../api/market'
 import * as watchlistApi from '../api/watchlist'
+import * as portfolioApi from '../api/portfolio'
 
 vi.mock('../api/market')
 vi.mock('../api/watchlist')
+vi.mock('../api/portfolio')
 vi.mock('../components/PriceChart', () => ({
   PriceChart: ({ mode }: { mode: string }) => (
     <div data-testid="price-chart">{mode}</div>
@@ -45,6 +47,16 @@ describe('AssetPage', () => {
       candles: [{ ts: '2026-07-30T00:00:00Z', open: 1, high: 2, low: 0.5, close: 1.5, volume: 10 }],
     })
     vi.mocked(watchlistApi.getWatchlist).mockResolvedValue({ symbols: [] })
+    vi.mocked(portfolioApi.getPortfolio).mockResolvedValue({
+      portfolio_id: 'p1', starting_cash: 100000, cash: 99000,
+      positions: [{
+        symbol: 'BTC', units: 0.01, avg_cost: 60000, price: 64231.5,
+        market_value: 642.31, unrealized_pl: 42.31, unrealized_pl_pct: 0.07,
+        change_24h_pl: 5,
+      }],
+      equity: 99642.31, today_pl: 5, total_return_pct: -0.0036,
+      stale: false, created_at: '2026-07-30T00:00:00Z',
+    })
   })
 
   it('renders header, price, stats, and the phase-3 ticket placeholder', async () => {
@@ -53,7 +65,9 @@ describe('AssetPage', () => {
     expect(screen.getByText('$64,231.50')).toBeInTheDocument()
     expect(screen.getByText('+2.31%', { exact: false })).toBeInTheDocument()
     expect(screen.getByText(/24h high/i)).toBeInTheDocument()
-    expect(screen.getByText(/trading opens soon/i)).toBeInTheDocument()
+    expect(await screen.findByText(/trade btc/i)).toBeInTheDocument()   // OrderTicket header
+    expect(screen.getByText(/you own/i)).toBeInTheDocument()
+    expect(screen.getByText('$642.31')).toBeInTheDocument()
   })
 
   it('defaults to line mode and switches to pro mode', async () => {
