@@ -212,7 +212,7 @@ export function AssetPage() {
               <CardContent className="p-4">
                 <p className="text-xs text-muted-foreground">You own</p>
                 <p className="mt-1 text-sm font-medium tabular-nums">
-                  {position ? formatUsd(position.market_value) : '$0.00'}
+                  {portfolioQuery.data ? formatUsd(position?.market_value ?? 0) : '—'}
                 </p>
               </CardContent>
             </Card>
@@ -226,6 +226,15 @@ export function AssetPage() {
             cash={portfolioQuery.data.cash}
             heldUnits={position?.units ?? 0}
           />
+        ) : portfolioQuery.isError && !portfolioQuery.data ? (
+          <div className="flex h-72 flex-col items-center justify-center gap-3 rounded-xl border border-border text-center">
+            <p className="text-sm text-muted-foreground">
+              We couldn't load your portfolio.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => portfolioQuery.refetch()}>
+              Try again
+            </Button>
+          </div>
         ) : (
           <Skeleton className="h-72 w-full rounded-xl" />
         )}

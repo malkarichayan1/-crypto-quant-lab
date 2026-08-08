@@ -144,6 +144,32 @@ describe('AssetPage', () => {
     expect(await screen.findByTestId('price-chart')).toBeInTheDocument()
   })
 
+  it('shows a portfolio error state with retry when the portfolio fails to load, and recovers on retry', async () => {
+    vi.mocked(portfolioApi.getPortfolio).mockReset()
+    vi.mocked(portfolioApi.getPortfolio)
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValueOnce({
+        portfolio_id: 'p1', starting_cash: 100000, cash: 99000,
+        positions: [{
+          symbol: 'BTC', units: 0.01, avg_cost: 60000, price: 64231.5,
+          market_value: 642.31, unrealized_pl: 42.31, unrealized_pl_pct: 0.07,
+          change_24h_pl: 5,
+        }],
+        equity: 99642.31, today_pl: 5, total_return_pct: -0.0036,
+        stale: false, created_at: '2026-07-30T00:00:00Z',
+      })
+
+    renderAt('/coins/BTC')
+    await screen.findByText('Bitcoin')
+    expect(await screen.findByText(/couldn't load your portfolio/i)).toBeInTheDocument()
+    // Loading/error state never gets conflated with "holds none of this coin".
+    expect(screen.getByText('—', { selector: 'p.text-sm' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /try again/i }))
+    expect(await screen.findByText(/trade btc/i)).toBeInTheDocument()
+    expect(screen.getByText('$642.31')).toBeInTheDocument()
+  })
+
   it('stops polling candles once the symbol is confirmed invalid', async () => {
     // shouldAdvanceTime keeps the fake clock ticking in near-real-time so
     // RTL's findBy* (which polls via real setTimeout) keeps working, while
