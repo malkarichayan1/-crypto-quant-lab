@@ -7,6 +7,7 @@ import { DashboardPage } from './DashboardPage'
 import * as portfolioApi from '../api/portfolio'
 import * as marketApi from '../api/market'
 import * as watchlistApi from '../api/watchlist'
+import type { EquitySeriesResponse } from '../types'
 
 vi.mock('../api/portfolio')
 vi.mock('../api/market')
@@ -105,5 +106,34 @@ describe('DashboardPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /try again/i }))
     expect(await screen.findByText('Portfolio Value')).toBeInTheDocument()
     expect(await screen.findByText('$87,000.00')).toBeInTheDocument()
+  })
+
+  it('keeps range buttons visible instead of unmounting the chart while a new range loads', async () => {
+    renderPage()
+    await screen.findByText('Portfolio Value')
+    await screen.findByRole('button', { name: '1M' })
+
+    let resolveNextRange: (value: EquitySeriesResponse) => void = () => {}
+    vi.mocked(portfolioApi.getPortfolioEquity).mockReturnValueOnce(
+      new Promise<EquitySeriesResponse>((resolve) => {
+        resolveNextRange = resolve
+      }),
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: '1W' }))
+
+    // The new range's fetch is still pending here. With `keepPreviousData`,
+    // the chart — and its own range-button row — stays mounted using the
+    // previous range's data instead of unmounting to a bare skeleton with no
+    // buttons to click back to (a real, empirically-reproduced regression
+    // caught by this branch's Task 11 code-quality review).
+    expect(screen.getByRole('button', { name: '1W' })).toBeInTheDocument()
+    expect(portfolioApi.getPortfolioEquity).toHaveBeenCalledWith('1W')
+
+    resolveNextRange({
+      range: '1W',
+      points: [{ ts: '2026-07-30T00:00:00Z', equity: 87000 }],
+    })
+    await screen.findByText('Portfolio Value') // let the update settle before the test ends
   })
 })

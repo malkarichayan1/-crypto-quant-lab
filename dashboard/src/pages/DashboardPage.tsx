@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -30,6 +30,10 @@ export function DashboardPage() {
     queryKey: ['portfolio', 'equity', range],
     queryFn: () => getPortfolioEquity(range),
     refetchInterval: POLL_INTERVAL_MS,
+    // Keep the previous range's chart (and its own range buttons) mounted
+    // while a newly-selected range is still loading, instead of the whole
+    // chart unmounting to a bare skeleton with no buttons to click back.
+    placeholderData: keepPreviousData,
   })
   const marketQuery = useQuery({
     queryKey: ['market-assets'],
