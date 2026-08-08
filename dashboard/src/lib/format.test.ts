@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatPct, formatNum, signClass, METRIC_LABELS, formatUsd } from './format'
+import { formatPct, formatNum, signClass, METRIC_LABELS, formatUsd, formatUnits } from './format'
 
 describe('formatPct', () => {
   it('renders a fraction as a signed percentage', () => {
@@ -33,5 +33,19 @@ describe('formatUsd', () => {
     expect(formatUsd(1234.5)).toBe('$1,234.50')
     expect(formatUsd(0)).toBe('$0.00')
     expect(formatUsd(-50)).toBe('-$50.00')
+  })
+})
+
+describe('formatUnits', () => {
+  it('shows 4 decimals for amounts >= 1', () => {
+    expect(formatUnits(12.34567)).toBe('12.3457')
+  })
+
+  it('shows 4 significant digits for small amounts', () => {
+    expect(formatUnits(0.00123456)).toBe('0.001235')
+  })
+
+  it('handles zero', () => {
+    expect(formatUnits(0)).toBe('0')
   })
 })

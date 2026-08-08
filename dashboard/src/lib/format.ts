@@ -47,3 +47,9 @@ const usdFormatter = new Intl.NumberFormat('en-US', {
 export function formatUsd(value: number): string {
   return usdFormatter.format(value)
 }
+
+export function formatUnits(units: number): string {
+  if (units === 0) return '0'
+  if (Math.abs(units) >= 1) return units.toFixed(4)
+  return units.toPrecision(4)
+}

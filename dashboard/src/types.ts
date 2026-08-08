@@ -155,3 +155,54 @@ export interface CandlesResponse {
 export interface WatchlistResponse {
   symbols: string[]
 }
+
+export type EquityRange = TimeRange | 'ALL'
+
+export interface Position {
+  symbol: string
+  units: number
+  avg_cost: number
+  price: number
+  market_value: number
+  unrealized_pl: number
+  unrealized_pl_pct: number
+  change_24h_pl: number
+}
+
+export interface PortfolioSummary {
+  portfolio_id: string
+  starting_cash: number
+  cash: number
+  positions: Position[]
+  equity: number
+  today_pl: number
+  total_return_pct: number
+  stale: boolean
+  created_at: string
+}
+
+export interface ManualOrder {
+  id: string
+  symbol: string
+  side: 'buy' | 'sell'
+  usd_amount: number
+  units: number
+  fill_price: number
+  created_at: string
+}
+
+export interface PlaceOrderRequest {
+  symbol: string
+  side: 'buy' | 'sell'
+  usd_amount: number
+}
+
+export interface ManualEquityPoint {
+  ts: string
+  equity: number
+}
+
+export interface EquitySeriesResponse {
+  range: EquityRange
+  points: ManualEquityPoint[]
+}
