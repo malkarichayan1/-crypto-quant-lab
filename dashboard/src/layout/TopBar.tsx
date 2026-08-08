@@ -17,10 +17,16 @@ export function TopBar() {
   const location = useLocation()
   const formRef = useRef<HTMLFormElement>(null)
   const { data } = useQuery({ queryKey: ['market-assets'], queryFn: getMarketAssets })
+  // No refetchInterval here: TopBar is mounted once at the AppShell level
+  // and never unmounts, so its own interval would run out of phase with
+  // whichever trading page's ['portfolio'] query is also active, doubling
+  // request volume on that shared key for as long as both are mounted. The
+  // chip still gets fresh data for free the moment any page-level query
+  // (same key, shared cache) refetches; staying briefly stale on
+  // non-trading pages is an acceptable trade for a secondary nav widget.
   const portfolioQuery = useQuery({
     queryKey: ['portfolio'],
     queryFn: getPortfolio,
-    refetchInterval: 30_000,
   })
   const portfolio = portfolioQuery.data
 
@@ -125,7 +131,7 @@ export function TopBar() {
         {portfolio && (
           <Link
             to="/portfolio"
-            className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 sm:flex"
+            className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 outline-none transition-colors duration-200 hover:bg-accent focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:flex"
           >
             <span className="text-xs font-medium tabular-nums">
               {formatUsd(portfolio.equity)}
