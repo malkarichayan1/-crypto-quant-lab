@@ -21,6 +21,7 @@ class Settings:
         paper_tick_interval_seconds: int = 60,
         paper_fetch_lookback_bars: int = 1000,
         manual_equity_snapshot_seconds: int = 3600,
+        advisor_enabled: bool = True,
     ) -> None:
         self.database_url = database_url
         self.anthropic_api_key = anthropic_api_key
@@ -29,6 +30,7 @@ class Settings:
         self.paper_tick_interval_seconds = paper_tick_interval_seconds
         self.paper_fetch_lookback_bars = paper_fetch_lookback_bars
         self.manual_equity_snapshot_seconds = manual_equity_snapshot_seconds
+        self.advisor_enabled = advisor_enabled
 
 
 def _parse_cors_origins(raw: str | None) -> list[str]:
@@ -50,4 +52,5 @@ def get_settings() -> Settings:
         manual_equity_snapshot_seconds=int(
             os.environ.get("MANUAL_EQUITY_SNAPSHOT_SECONDS", "3600")
         ),
+        advisor_enabled=os.environ.get("MANUAL_ADVISOR_ENABLED", "1") == "1",
     )
