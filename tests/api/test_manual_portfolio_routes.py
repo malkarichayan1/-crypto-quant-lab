@@ -92,3 +92,22 @@ def test_reset_starts_a_fresh_portfolio(client):
     body = client.get("/portfolio").json()
     assert body["cash"] == 100_000.0
     assert body["positions"] == []
+
+
+def test_placing_an_order_clears_cached_advice(client, session):
+    from datetime import datetime, timezone
+
+    from hedgefund.api.db.manual_repository import ManualRepository
+
+    repo = ManualRepository(session)
+    portfolio = repo.get_or_create_active_portfolio(100_000.0)
+    repo.add_advice(portfolio.id, scope="portfolio", payload={"suggestions": []})
+    session.commit()
+
+    response = client.post(
+        "/portfolio/orders", json={"symbol": "BTC", "side": "buy", "usd_amount": 100.0}
+    )
+
+    assert response.status_code == 201
+    cutoff = datetime(2000, 1, 1, tzinfo=timezone.utc)
+    assert repo.get_fresh_advice(portfolio.id, scope="portfolio", not_before=cutoff) is None

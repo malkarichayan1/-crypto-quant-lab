@@ -91,10 +91,15 @@ def place_order(repo, market: MarketDataProvider, *, symbol: str, side: str, usd
     held = holdings.get(symbol, pm.Holding(0.0, 0.0))
     pm.validate_order(side, usd_amount, price=quote.price, cash=cash, held_units=held.units)
     units = pm.units_for(usd_amount, quote.price)
-    return repo.add_order(
+    order = repo.add_order(
         portfolio.id, symbol=symbol, side=side,
         usd_amount=usd_amount, units=units, fill_price=quote.price,
     )
+    # A fill changes holdings, cash, and concentration — every cached advice
+    # payload for this portfolio now describes a portfolio that no longer
+    # exists. Drop them all; the next explicit request regenerates.
+    repo.clear_advice(portfolio.id)
+    return order
 
 
 def get_equity_series(
