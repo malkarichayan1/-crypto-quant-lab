@@ -89,6 +89,8 @@ def coin_signal(
 
     cross: SmaCross = "none"
     if sma_short is not None and sma_long is not None:
+        # An exact tie falls into "death" — accepted, effectively unreachable
+        # at float precision, not worth a third branch.
         cross = "golden" if sma_short > sma_long else "death"
 
     zone: RsiZone = "neutral"
@@ -130,13 +132,13 @@ def portfolio_context(
         if value > top_value:
             top_symbol, top_value = symbol, value
 
-    safe_equity = equity if equity > 0 else 0.0
+    has_equity = equity > 0
     return PortfolioContext(
         equity=equity,
         cash=cash,
-        idle_cash_pct=(cash / equity) if safe_equity else 0.0,
+        idle_cash_pct=(cash / equity) if has_equity else 0.0,
         top_symbol=top_symbol,
-        top_concentration_pct=(top_value / equity) if safe_equity else 0.0,
+        top_concentration_pct=(top_value / equity) if has_equity else 0.0,
         holdings_count=len(positions),
         total_return_pct=total_return_pct,
     )

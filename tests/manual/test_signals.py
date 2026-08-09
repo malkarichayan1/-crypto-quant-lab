@@ -70,6 +70,39 @@ def test_coin_signal_raises_on_empty_candles():
         sig.coin_signal("BTC", (), short_period=5, long_period=20, rsi_period=14)
 
 
+def test_coin_signal_computes_momentum_pct_for_a_rising_series():
+    # 30 bars is enough to look back MOMENTUM_LOOKBACK (24) bars from the end.
+    closes = [100.0 + i for i in range(30)]
+    candles = _series(closes)
+
+    signal = sig.coin_signal("BTC", candles, short_period=5, long_period=20, rsi_period=14)
+
+    past_close = closes[-(sig.MOMENTUM_LOOKBACK + 1)]
+    expected = (closes[-1] - past_close) / past_close
+    assert signal.momentum_pct == pytest.approx(expected)
+
+
+def test_coin_signal_momentum_pct_is_none_at_exact_lookback_boundary():
+    # Exactly MOMENTUM_LOOKBACK candles: len(candles) > momentum_lookback is
+    # False, so there is no bar far enough back to compare against.
+    candles = _series([100.0 + i for i in range(sig.MOMENTUM_LOOKBACK)])
+
+    signal = sig.coin_signal("BTC", candles, short_period=5, long_period=20, rsi_period=14)
+
+    assert signal.momentum_pct is None
+
+
+def test_coin_signal_guards_momentum_pct_against_zero_price_lookback_bars_ago():
+    # The bar MOMENTUM_LOOKBACK back from the end is priced at 0 — the `if
+    # past:` guard must return None instead of raising ZeroDivisionError.
+    closes = [0.0] + [100.0 + i for i in range(sig.MOMENTUM_LOOKBACK)]
+    candles = _series(closes)
+
+    signal = sig.coin_signal("BTC", candles, short_period=5, long_period=20, rsi_period=14)
+
+    assert signal.momentum_pct is None
+
+
 def test_portfolio_context_computes_idle_cash_and_concentration():
     ctx = sig.portfolio_context(
         equity=1000.0, cash=250.0, total_return_pct=0.10,
