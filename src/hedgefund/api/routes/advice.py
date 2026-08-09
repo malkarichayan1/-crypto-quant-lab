@@ -26,12 +26,10 @@ def _scope_for(symbol: str | None, market) -> str:
     if symbol is None:
         return adv.PORTFOLIO_SCOPE
     upper = symbol.upper()
-    pair_for = getattr(market, "pair_for", None)
-    if pair_for is not None:
-        try:
-            pair_for(upper)
-        except UnknownSymbolError:
-            raise HTTPException(status_code=404, detail="Unknown coin.")
+    try:
+        market.pair_for(upper)
+    except UnknownSymbolError:
+        raise HTTPException(status_code=404, detail="Unknown coin.")
     return upper
 
 
@@ -80,6 +78,10 @@ def create_advice(
     except PricesUnavailableError:
         raise HTTPException(status_code=503, detail=_UNAVAILABLE_MSG)
     except UnknownSymbolError:
+        # Currently unreachable: _scope_for() above already validates `symbol`
+        # via market.pair_for() and 404s before we get here. Kept as
+        # defensive plumbing matching manual_portfolio.py's create_order,
+        # in case get_portfolio_view/generate_advice ever start raising it.
         raise HTTPException(status_code=404, detail="Unknown coin.")
     session.commit()
     return AdviceResponse(enabled=True, advice=AdvicePayloadOut.model_validate(payload))

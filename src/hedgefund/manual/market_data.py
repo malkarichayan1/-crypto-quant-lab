@@ -83,6 +83,10 @@ class CandleSeries:
 class MarketDataProvider(Protocol):
     def get_assets(self) -> AssetsSnapshot: ...
     def get_candles(self, symbol: str, range_key: str) -> CandleSeries: ...
+    def pair_for(self, symbol: str) -> str:
+        """Resolve a base symbol to its trading pair. Raises UnknownSymbolError
+        if `symbol` is not part of the universe."""
+        ...
 
 
 def base_symbol(pair: str) -> str:
