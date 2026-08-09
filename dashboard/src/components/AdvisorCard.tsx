@@ -25,6 +25,7 @@ type Props = {
 
 export function AdvisorCard({ symbol }: Props) {
   const [pendingAction, setPendingAction] = useState<SuggestionAction | null>(null)
+  const [orderError, setOrderError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<number | null>(null)
   const queryClient = useQueryClient()
 
@@ -33,10 +34,31 @@ export function AdvisorCard({ symbol }: Props) {
 
   const generate = useMutation({
     mutationFn: () => generateAdvice(symbol),
-    onSuccess: (data: AdviceResponse) => queryClient.setQueryData(queryKey, data),
+    onSuccess: (data: AdviceResponse) => {
+      queryClient.setQueryData(queryKey, data)
+      // A refreshed suggestion set may not even have an item at the previously
+      // expanded index — never let unrelated "why" text render pre-expanded.
+      setExpanded(null)
+    },
   })
 
-  const placeOrder = usePlaceOrder({ onSuccess: () => setPendingAction(null) })
+  // Opening/closing the review dialog always clears any previous order error
+  // so a stale failure message never bleeds into the next suggestion's review.
+  const openReview = (action: SuggestionAction) => {
+    setOrderError(null)
+    setPendingAction(action)
+  }
+  const closeReview = () => {
+    setOrderError(null)
+    setPendingAction(null)
+  }
+
+  const placeOrder = usePlaceOrder({
+    onSuccess: closeReview,
+    // Money-moving action: on failure, keep the dialog open and show why —
+    // never fail silently, never auto-close so the user can see the error.
+    onError: (error) => setOrderError(error.message),
+  })
 
   if (cached.isLoading) return <Skeleton className="h-40 rounded-xl" />
   // A disabled advisor renders nothing at all rather than an explanatory box —
@@ -92,6 +114,10 @@ export function AdvisorCard({ symbol }: Props) {
           </div>
         )}
 
+        {advice && advice.suggestions.length === 0 && (
+          <p className="text-sm text-muted-foreground">No suggestions right now.</p>
+        )}
+
         {advice?.suggestions.map((suggestion, index) => (
           <div
             key={index}
@@ -101,20 +127,24 @@ export function AdvisorCard({ symbol }: Props) {
 
             <button
               type="button"
+              id={`why-toggle-${index}`}
               onClick={() => setExpanded(expanded === index ? null : index)}
               aria-expanded={expanded === index}
+              aria-controls={`why-content-${index}`}
               className="self-start text-xs text-primary transition-colors duration-200 hover:underline"
             >
               Why?
             </button>
             {expanded === index && (
-              <p className="text-xs text-muted-foreground">{suggestion.why}</p>
+              <p id={`why-content-${index}`} className="text-xs text-muted-foreground">
+                {suggestion.why}
+              </p>
             )}
 
             {suggestion.action && (
               <Button
                 size="sm"
-                onClick={() => setPendingAction(suggestion.action)}
+                onClick={() => openReview(suggestion.action!)}
                 className={cn(
                   'mt-1 self-start transition-transform duration-200 active:scale-[0.98]',
                   suggestion.action.side === 'buy'
@@ -142,10 +172,7 @@ export function AdvisorCard({ symbol }: Props) {
         )}
       </CardContent>
 
-      <Dialog
-        open={pendingAction !== null}
-        onOpenChange={(open) => !open && setPendingAction(null)}
-      >
+      <Dialog open={pendingAction !== null} onOpenChange={(open) => !open && closeReview()}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="capitalize">
@@ -156,8 +183,13 @@ export function AdvisorCard({ symbol }: Props) {
               Market order, filled at the latest cached price. This is simulated money.
             </DialogDescription>
           </DialogHeader>
+          {orderError && (
+            <p className="text-xs text-loss" role="alert">
+              {orderError}
+            </p>
+          )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingAction(null)}>
+            <Button variant="outline" onClick={closeReview}>
               Cancel
             </Button>
             <Button

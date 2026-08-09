@@ -11,9 +11,24 @@ vi.mock('../api/advice', () => ({
   generateAdvice: (s?: string) => generateAdvice(s),
 }))
 
+type PlaceOrderOptions = { onSuccess?: () => void; onError?: (error: Error) => void }
+
 const mutate = vi.fn()
+// Controlled per-test so a rejected placement can be simulated without
+// changing what `usePlaceOrder` itself is mocked to return elsewhere.
+let shouldRejectOrder = false
 vi.mock('../hooks/usePlaceOrder', () => ({
-  usePlaceOrder: () => ({ mutate, isPending: false }),
+  usePlaceOrder: (options: PlaceOrderOptions = {}) => ({
+    mutate: (body: unknown) => {
+      mutate(body)
+      if (shouldRejectOrder) {
+        options.onError?.(new Error('Not enough buying power'))
+      } else {
+        options.onSuccess?.()
+      }
+    },
+    isPending: false,
+  }),
 }))
 
 const SUGGESTION = { text: 'Consider buying BTC', why: 'Its RSI is 22.', action: null }
@@ -21,6 +36,11 @@ const WITH_ACTION = {
   text: 'Buy $100 of BTC',
   why: 'Oversold.',
   action: { side: 'buy' as const, symbol: 'BTC', usd_amount: 100 },
+}
+const WITH_ACTION_2 = {
+  text: 'Sell $50 of ETH',
+  why: 'Overbought.',
+  action: { side: 'sell' as const, symbol: 'ETH', usd_amount: 50 },
 }
 
 function payload(suggestions: unknown[], source = 'llm') {
@@ -47,6 +67,7 @@ describe('AdvisorCard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     window.localStorage.clear()
+    shouldRejectOrder = false
     getAdvice.mockResolvedValue({ enabled: true, advice: null })
     generateAdvice.mockResolvedValue(payload([SUGGESTION]))
   })
@@ -168,5 +189,54 @@ describe('AdvisorCard', () => {
     await userEvent.click(await screen.findByRole('button', { name: /get advice/i }))
 
     expect(await screen.findByText(/couldn't generate advice/i)).toBeInTheDocument()
+  })
+
+  it('shows a visible error in the dialog and keeps it open when placing the order fails', async () => {
+    shouldRejectOrder = true
+    getAdvice.mockResolvedValue(payload([WITH_ACTION]))
+    renderCard()
+
+    await userEvent.click(await screen.findByRole('button', { name: /buy \$100\.00 of BTC/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /confirm buy/i }))
+
+    expect(await screen.findByText(/not enough buying power/i)).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('does not leak a canceled suggestion into a later confirm', async () => {
+    getAdvice.mockResolvedValue(payload([WITH_ACTION, WITH_ACTION_2]))
+    renderCard()
+
+    await userEvent.click(await screen.findByRole('button', { name: /buy \$100\.00 of BTC/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /cancel/i }))
+
+    await userEvent.click(await screen.findByRole('button', { name: /sell \$50\.00 of ETH/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /confirm sell/i }))
+
+    expect(mutate).toHaveBeenCalledWith({ symbol: 'ETH', side: 'sell', usd_amount: 50 })
+    expect(mutate).not.toHaveBeenCalledWith({ symbol: 'BTC', side: 'buy', usd_amount: 100 })
+  })
+
+  it('collapses an expanded Why after Refresh returns a new suggestion set', async () => {
+    const OTHER_SUGGESTION = { text: 'Consider selling ETH', why: 'Its RSI is 80.', action: null }
+    getAdvice.mockResolvedValue(payload([SUGGESTION]))
+    generateAdvice.mockResolvedValue(payload([OTHER_SUGGESTION]))
+    renderCard()
+
+    await userEvent.click(await screen.findByRole('button', { name: /why/i }))
+    expect(screen.getByText('Its RSI is 22.')).toBeInTheDocument()
+
+    await userEvent.click(await screen.findByRole('button', { name: /refresh/i }))
+
+    await screen.findByText('Consider selling ETH')
+    expect(screen.queryByText('Its RSI is 80.')).not.toBeInTheDocument()
+  })
+
+  it('shows fallback copy when advice comes back with no suggestions', async () => {
+    getAdvice.mockResolvedValue(payload([]))
+
+    renderCard()
+
+    expect(await screen.findByText(/no suggestions right now/i)).toBeInTheDocument()
   })
 })
