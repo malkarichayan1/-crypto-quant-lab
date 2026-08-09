@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import DateTime, Float, ForeignKey, String, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from hedgefund.api.db.models import Base
@@ -59,3 +59,22 @@ class PortfolioEquityRow(Base):
     )
     ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     equity: Mapped[float] = mapped_column(Float, nullable=False)
+
+
+class AdviceLogRow(Base):
+    __tablename__ = "advice_log"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    portfolio_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("portfolios.id"), nullable=False
+    )
+    # Either the literal "portfolio" (dashboard-wide advice) or a base symbol
+    # ("BTC"). Non-null so every lookup is a plain equality match; "portfolio"
+    # cannot collide with a base symbol because base symbols are uppercase.
+    scope: Mapped[str] = mapped_column(String, nullable=False)
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    # clock_timestamp() so two rows written in one transaction still order
+    # deterministically — get_fresh_advice() takes the newest per scope.
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.clock_timestamp(), nullable=False
+    )

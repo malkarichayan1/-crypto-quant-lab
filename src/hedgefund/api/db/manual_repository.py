@@ -4,10 +4,11 @@ import uuid
 import zlib
 from datetime import datetime
 
-from sqlalchemy import select, text
+from sqlalchemy import delete, select, text
 from sqlalchemy.orm import Session
 
 from hedgefund.api.db.manual_models import (
+    AdviceLogRow,
     ManualOrderRow,
     PortfolioEquityRow,
     PortfolioRow,
@@ -123,3 +124,43 @@ class ManualRepository:
         if since is not None:
             stmt = stmt.where(PortfolioEquityRow.ts >= since)
         return list(self._s.scalars(stmt).all())
+
+    # ---- advice cache (Phase 4) ----
+
+    def get_fresh_advice(
+        self, portfolio_id: uuid.UUID, *, scope: str, not_before: datetime
+    ) -> AdviceLogRow | None:
+        """Newest advice row for this (portfolio, scope) generated at or after
+        `not_before`. The TTL lives in the service layer, which computes the
+        cutoff — the repository only answers 'is there one this recent'."""
+        stmt = (
+            select(AdviceLogRow)
+            .where(
+                AdviceLogRow.portfolio_id == portfolio_id,
+                AdviceLogRow.scope == scope,
+                AdviceLogRow.generated_at >= not_before,
+            )
+            .order_by(AdviceLogRow.generated_at.desc())
+            .limit(1)
+        )
+        return self._s.scalars(stmt).first()
+
+    def add_advice(
+        self, portfolio_id: uuid.UUID, *, scope: str, payload: dict
+    ) -> AdviceLogRow:
+        row = AdviceLogRow(
+            id=uuid.uuid4(), portfolio_id=portfolio_id, scope=scope, payload=payload
+        )
+        self._s.add(row)
+        self._s.flush()
+        return row
+
+    def clear_advice(self, portfolio_id: uuid.UUID) -> int:
+        """Drop every cached scope for this portfolio. Called when an order
+        fills — a new position invalidates portfolio-wide *and* per-coin advice.
+        Returns the number of rows removed."""
+        result = self._s.execute(
+            delete(AdviceLogRow).where(AdviceLogRow.portfolio_id == portfolio_id)
+        )
+        self._s.flush()
+        return result.rowcount

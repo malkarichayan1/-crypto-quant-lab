@@ -139,3 +139,64 @@ def test_equity_points_filtered_by_since(session):
     recent = repo.list_equity(p.id, since=now - timedelta(days=5))
     assert len(recent) == 1
     assert recent[0].equity == 101_000.0
+
+
+def test_add_and_get_fresh_advice_round_trips_payload(session):
+    repo = ManualRepository(session)
+    portfolio = repo.create_portfolio(100_000.0)
+    payload = {"suggestions": [{"text": "hi", "why": "because", "action": None}]}
+
+    repo.add_advice(portfolio.id, scope="portfolio", payload=payload)
+
+    row = repo.get_fresh_advice(
+        portfolio.id, scope="portfolio",
+        not_before=datetime(2000, 1, 1, tzinfo=timezone.utc),
+    )
+    assert row is not None
+    assert row.payload == payload
+
+
+def test_get_fresh_advice_ignores_rows_older_than_cutoff(session):
+    repo = ManualRepository(session)
+    portfolio = repo.create_portfolio(100_000.0)
+    repo.add_advice(portfolio.id, scope="portfolio", payload={"suggestions": []})
+
+    future = datetime.now(timezone.utc) + timedelta(minutes=5)
+    assert repo.get_fresh_advice(portfolio.id, scope="portfolio", not_before=future) is None
+
+
+def test_get_fresh_advice_is_scoped_per_symbol(session):
+    repo = ManualRepository(session)
+    portfolio = repo.create_portfolio(100_000.0)
+    repo.add_advice(portfolio.id, scope="BTC", payload={"suggestions": [], "s": "btc"})
+
+    cutoff = datetime(2000, 1, 1, tzinfo=timezone.utc)
+    assert repo.get_fresh_advice(portfolio.id, scope="BTC", not_before=cutoff) is not None
+    assert repo.get_fresh_advice(portfolio.id, scope="ETH", not_before=cutoff) is None
+
+
+def test_get_fresh_advice_returns_newest_row_for_scope(session):
+    repo = ManualRepository(session)
+    portfolio = repo.create_portfolio(100_000.0)
+    repo.add_advice(portfolio.id, scope="portfolio", payload={"n": 1})
+    repo.add_advice(portfolio.id, scope="portfolio", payload={"n": 2})
+
+    row = repo.get_fresh_advice(
+        portfolio.id, scope="portfolio",
+        not_before=datetime(2000, 1, 1, tzinfo=timezone.utc),
+    )
+    assert row.payload == {"n": 2}
+
+
+def test_clear_advice_removes_every_scope_for_the_portfolio(session):
+    repo = ManualRepository(session)
+    portfolio = repo.create_portfolio(100_000.0)
+    repo.add_advice(portfolio.id, scope="portfolio", payload={})
+    repo.add_advice(portfolio.id, scope="BTC", payload={})
+
+    removed = repo.clear_advice(portfolio.id)
+
+    cutoff = datetime(2000, 1, 1, tzinfo=timezone.utc)
+    assert removed == 2
+    assert repo.get_fresh_advice(portfolio.id, scope="portfolio", not_before=cutoff) is None
+    assert repo.get_fresh_advice(portfolio.id, scope="BTC", not_before=cutoff) is None
