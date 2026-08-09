@@ -1,14 +1,22 @@
 from __future__ import annotations
 
 import json
+import logging
+import uuid
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
-from hedgefund.manual.market_data import AssetQuote
-from hedgefund.manual.signals import CoinSignal, PortfolioContext
+from hedgefund.manual.market_data import (
+    AssetQuote,
+    MarketDataProvider,
+    PricesUnavailableError,
+    UnknownSymbolError,
+)
+from hedgefund.manual.signals import CoinSignal, PortfolioContext, coin_signal, portfolio_context
 
 DISCLAIMER = "Simulated learning advice — not financial advice."
 MAX_ADVICE_SYMBOLS = 6
@@ -18,6 +26,14 @@ PORTFOLIO_SCOPE = "portfolio"
 # Thresholds that trigger a template line. Named so the intent is readable.
 IDLE_CASH_THRESHOLD = 0.60
 CONCENTRATION_THRESHOLD = 0.50
+
+CACHE_TTL = timedelta(minutes=15)
+# The candle range signals are computed over. 1W of hourly bars is enough to
+# warm a 20-period SMA and a 14-period RSI with room to spare.
+SIGNAL_RANGE = "1W"
+LLM_MAX_TOKENS = 1024
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -282,3 +298,83 @@ def parse_llm_advice(
             )
         out.append(Suggestion(text=item.text, why=item.why, action=action))
     return out
+
+
+def read_cached_advice(repo, portfolio_id: uuid.UUID, *, scope: str) -> dict | None:
+    """Cached payload for this scope if it is still fresh, else None.
+
+    Never calls the LLM. This is what GET /advice serves, which is why simply
+    loading the Dashboard costs nothing.
+    """
+    row = repo.get_fresh_advice(
+        portfolio_id, scope=scope, not_before=datetime.now(timezone.utc) - CACHE_TTL
+    )
+    return None if row is None else row.payload
+
+
+def _gather_signals(
+    market: MarketDataProvider, symbols: Sequence[str]
+) -> list[CoinSignal]:
+    """Signals for each symbol, skipping any the exchange cannot price.
+
+    One bad symbol must not sink the whole advice request — the card degrades
+    to fewer facts rather than erroring.
+    """
+    out: list[CoinSignal] = []
+    for symbol in symbols:
+        try:
+            series = market.get_candles(symbol, SIGNAL_RANGE)
+            out.append(coin_signal(symbol, series.candles))
+        except (UnknownSymbolError, PricesUnavailableError, ValueError) as exc:
+            _log.warning("advice: skipping %s (%s)", symbol, exc)
+    return out
+
+
+def generate_advice(
+    repo, market: MarketDataProvider, call_llm, *, view, scope: str
+) -> dict:
+    """Produce (or reuse) an advice payload for `scope` and cache it.
+
+    Returns the payload dict — never raises for LLM problems. `view` is a
+    PortfolioViewData the caller has already loaded. Caller commits.
+    """
+    cached = read_cached_advice(repo, view.portfolio_id, scope=scope)
+    if cached is not None:
+        return cached
+
+    snapshot = market.get_assets()
+    quotes = snapshot.assets
+    held = [p.symbol for p in view.positions]
+
+    symbols = [scope] if scope != PORTFOLIO_SCOPE else select_symbols(
+        held=held, quotes=quotes
+    )
+    signals = _gather_signals(market, symbols)
+    context = portfolio_context(
+        equity=view.equity,
+        cash=view.cash,
+        total_return_pct=view.total_return_pct,
+        positions=[(p.symbol, p.market_value) for p in view.positions],
+    )
+
+    suggestions: list[Suggestion]
+    source = "llm"
+    try:
+        raw, _cost = call_llm(
+            [{"role": "user", "content": build_prompt(signals, context, scope=scope)}],
+            max_tokens=LLM_MAX_TOKENS,
+        )
+        suggestions = parse_llm_advice(
+            raw,
+            known_symbols={q.symbol for q in quotes},
+            cash=view.cash,
+            holdings={p.symbol: p.market_value for p in view.positions},
+        )
+    except Exception as exc:  # noqa: BLE001 — any LLM failure degrades, never breaks
+        _log.warning("advice: LLM unavailable, using template fallback (%s)", exc)
+        suggestions = template_advice(signals, context)
+        source = "template"
+
+    payload = suggestions_to_payload(suggestions, source=source)
+    repo.add_advice(view.portfolio_id, scope=scope, payload=payload)
+    return payload

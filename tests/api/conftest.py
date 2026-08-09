@@ -47,13 +47,6 @@ def session(engine):
 
 
 @pytest.fixture
-def market_data():
-    from tests.fixtures.market import FakeMarketData
-
-    return FakeMarketData()
-
-
-@pytest.fixture
 def client(session, market_data):
     app = create_app()
 

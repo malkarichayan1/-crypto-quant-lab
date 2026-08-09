@@ -285,3 +285,131 @@ def test_parse_llm_advice_strips_an_action_for_an_unknown_symbol():
     parsed = adv.parse_llm_advice(body, known_symbols={"BTC"}, cash=1_000.0, holdings={})
 
     assert parsed[0].action is None
+
+
+# ---- generation orchestration ----
+
+class _FakeRepo:
+    """Minimal stand-in for ManualRepository — only what advice.py calls."""
+
+    def __init__(self):
+        self.rows: list[tuple[str, dict]] = []
+        self.cleared = 0
+
+    def get_fresh_advice(self, portfolio_id, *, scope, not_before):
+        for row_scope, payload in reversed(self.rows):
+            if row_scope == scope:
+                return type("Row", (), {"payload": payload, "generated_at": not_before})()
+        return None
+
+    def add_advice(self, portfolio_id, *, scope, payload):
+        self.rows.append((scope, payload))
+        return type("Row", (), {"payload": payload})()
+
+    def clear_advice(self, portfolio_id):
+        self.cleared += 1
+        return 0
+
+
+def _view(cash=5_000.0, positions=()):
+    import uuid
+    from datetime import datetime, timezone
+
+    from hedgefund.manual.portfolio_service import PortfolioViewData
+
+    return PortfolioViewData(
+        portfolio_id=uuid.uuid4(), starting_cash=10_000.0, cash=cash,
+        positions=tuple(positions), equity=10_000.0, today_pl=0.0,
+        total_return_pct=0.0, stale=False,
+        created_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+    )
+
+
+def test_generate_advice_uses_the_llm_when_it_returns_valid_json(market_data):
+    repo = _FakeRepo()
+    calls = []
+
+    def fake_llm(messages, model="m", max_tokens=1024):
+        calls.append(messages)
+        return _GOOD, 0.001
+
+    result = adv.generate_advice(
+        repo, market_data, fake_llm, view=_view(), scope=adv.PORTFOLIO_SCOPE
+    )
+
+    assert result["source"] == "llm"
+    assert len(result["suggestions"]) == 2
+    assert len(calls) == 1
+
+
+def test_generate_advice_falls_back_to_templates_when_the_llm_raises(market_data):
+    repo = _FakeRepo()
+
+    def boom(messages, model="m", max_tokens=1024):
+        raise RuntimeError("anthropic is down")
+
+    result = adv.generate_advice(
+        repo, market_data, boom, view=_view(), scope=adv.PORTFOLIO_SCOPE
+    )
+
+    assert result["source"] == "template"
+    assert len(result["suggestions"]) >= 1
+
+
+def test_generate_advice_falls_back_when_the_llm_returns_garbage(market_data):
+    repo = _FakeRepo()
+
+    result = adv.generate_advice(
+        repo, market_data, lambda *a, **k: ("nope", 0.0),
+        view=_view(), scope=adv.PORTFOLIO_SCOPE,
+    )
+
+    assert result["source"] == "template"
+
+
+def test_generate_advice_always_carries_the_disclaimer(market_data):
+    repo = _FakeRepo()
+
+    result = adv.generate_advice(
+        repo, market_data, lambda *a, **k: ("nope", 0.0),
+        view=_view(), scope=adv.PORTFOLIO_SCOPE,
+    )
+
+    assert result["disclaimer"] == adv.DISCLAIMER
+
+
+def test_generate_advice_writes_the_result_to_the_cache(market_data):
+    repo = _FakeRepo()
+
+    adv.generate_advice(repo, market_data, lambda *a, **k: (_GOOD, 0.0),
+                        view=_view(), scope=adv.PORTFOLIO_SCOPE)
+
+    assert len(repo.rows) == 1
+    assert repo.rows[0][0] == adv.PORTFOLIO_SCOPE
+
+
+def test_generate_advice_reuses_a_fresh_cache_entry_without_calling_the_llm(market_data):
+    repo = _FakeRepo()
+    repo.rows.append((adv.PORTFOLIO_SCOPE, {"suggestions": [], "source": "llm",
+                                            "disclaimer": adv.DISCLAIMER}))
+    called = []
+
+    adv.generate_advice(repo, market_data,
+                        lambda *a, **k: called.append(1) or (_GOOD, 0.0),
+                        view=_view(), scope=adv.PORTFOLIO_SCOPE)
+
+    assert called == []
+
+
+def test_read_cached_advice_returns_none_when_nothing_is_cached():
+    assert adv.read_cached_advice(_FakeRepo(), _view().portfolio_id,
+                                  scope=adv.PORTFOLIO_SCOPE) is None
+
+
+def test_generate_advice_for_a_single_coin_scopes_to_that_symbol(market_data):
+    repo = _FakeRepo()
+
+    adv.generate_advice(repo, market_data, lambda *a, **k: (_GOOD, 0.0),
+                        view=_view(), scope="BTC")
+
+    assert repo.rows[0][0] == "BTC"
