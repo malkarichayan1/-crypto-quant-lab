@@ -1,7 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -14,9 +11,8 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { placeOrder } from '../api/portfolio'
+import { usePlaceOrder } from '../hooks/usePlaceOrder'
 import { formatUnits, formatUsd } from '../lib/format'
-import type { PlaceOrderRequest } from '../types'
 
 type Props = {
   symbol: string
@@ -39,8 +35,6 @@ export function OrderTicket({ symbol, price, cash, heldUnits }: Props) {
   const [amount, setAmount] = useState('')
   const [isReviewOpen, setIsReviewOpen] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
-  const queryClient = useQueryClient()
-  const navigate = useNavigate()
 
   const heldValue = heldUnits * price
   const parsed = Number(amount)
@@ -61,19 +55,13 @@ export function OrderTicket({ symbol, price, cash, heldUnits }: Props) {
   const inlineError = validationError ?? serverError
   const canReview = hasAmount && !validationError
 
-  const mutation = useMutation({
-    mutationFn: (body: PlaceOrderRequest) => placeOrder(body),
-    onSuccess: (order) => {
+  const mutation = usePlaceOrder({
+    onSuccess: () => {
       setIsReviewOpen(false)
       setAmount('')
       setServerError(null)
-      queryClient.invalidateQueries({ queryKey: ['portfolio'] })
-      const verb = order.side === 'buy' ? 'Bought' : 'Sold'
-      toast.success(`${verb} ${formatUsd(order.usd_amount)} of ${order.symbol} ✓`, {
-        action: { label: 'Portfolio', onClick: () => navigate('/portfolio') },
-      })
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       setIsReviewOpen(false)
       setServerError(error.message)
     },
