@@ -82,8 +82,16 @@ def test_template_advice_never_exceeds_three_suggestions():
     assert len(suggestions) <= 3
 
 
+def test_template_advice_flags_all_cash_when_no_holdings():
+    suggestions = adv.template_advice([], _context(holdings_count=0))
+
+    assert any("cash" in s.text.lower() for s in suggestions)
+
+
 def test_template_advice_flags_idle_cash():
-    suggestions = adv.template_advice([], _context(idle_cash_pct=0.95, holdings_count=0))
+    # holdings_count must be non-zero here, otherwise execution falls into the
+    # "all cash" branch instead of the idle-cash elif this test is named for.
+    suggestions = adv.template_advice([], _context(idle_cash_pct=0.95, holdings_count=1))
 
     assert any("cash" in s.text.lower() for s in suggestions)
 
@@ -99,6 +107,20 @@ def test_template_advice_flags_concentration():
 
 def test_template_advice_mentions_an_oversold_coin_by_name():
     suggestions = adv.template_advice([_signal("SOL", zone="oversold")], _context())
+
+    assert any("SOL" in s.text for s in suggestions)
+
+
+def test_template_advice_mentions_an_overbought_coin_by_name():
+    suggestions = adv.template_advice([_signal("SOL", zone="overbought")], _context())
+
+    assert any("SOL" in s.text for s in suggestions)
+
+
+def test_template_advice_mentions_a_golden_cross_coin_by_name():
+    suggestions = adv.template_advice(
+        [_signal("SOL", cross="golden", zone="neutral")], _context()
+    )
 
     assert any("SOL" in s.text for s in suggestions)
 
@@ -130,3 +152,29 @@ def test_build_prompt_names_the_focus_coin_when_scoped_to_one():
     prompt = adv.build_prompt([_signal("BTC")], _context(), scope="BTC")
 
     assert "BTC" in prompt
+
+
+# ---- payload serialization ----
+
+def test_suggestions_to_payload_serializes_suggestions_and_action():
+    suggestions = [
+        adv.Suggestion(
+            text="Consider a small BTC buy.",
+            why="BTC looks oversold.",
+            action=adv.SuggestionAction(side="buy", symbol="BTC", usd_amount=250.0),
+        ),
+    ]
+
+    payload = adv.suggestions_to_payload(suggestions, source="llm")
+
+    assert payload == {
+        "suggestions": [
+            {
+                "text": "Consider a small BTC buy.",
+                "why": "BTC looks oversold.",
+                "action": {"side": "buy", "symbol": "BTC", "usd_amount": 250.0},
+            },
+        ],
+        "disclaimer": adv.DISCLAIMER,
+        "source": "llm",
+    }
