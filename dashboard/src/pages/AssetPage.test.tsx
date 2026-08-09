@@ -11,6 +11,10 @@ import * as portfolioApi from '../api/portfolio'
 vi.mock('../api/market')
 vi.mock('../api/watchlist')
 vi.mock('../api/portfolio')
+vi.mock('../api/advice', () => ({
+  getAdvice: () => Promise.resolve({ enabled: true, advice: null }),
+  generateAdvice: () => Promise.resolve({ enabled: true, advice: null }),
+}))
 vi.mock('../components/PriceChart', () => ({
   PriceChart: ({ mode }: { mode: string }) => (
     <div data-testid="price-chart">{mode}</div>
@@ -189,5 +193,11 @@ describe('AssetPage', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('renders an advisor card scoped to this coin', async () => {
+    renderAt('/coins/BTC')
+
+    expect(await screen.findByText(/Advisor's take on BTC/)).toBeInTheDocument()
   })
 })

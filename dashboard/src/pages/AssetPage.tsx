@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { getAssetCandles, getMarketAssets } from '../api/market'
 import { getPortfolio } from '../api/portfolio'
 import { useWatchlist } from '../hooks/useWatchlist'
+import { AdvisorCard } from '../components/AdvisorCard'
 import { CoinIcon } from '../components/CoinIcon'
 import { OrderTicket } from '../components/OrderTicket'
 import { PriceChart } from '../components/PriceChart'
@@ -219,25 +220,29 @@ export function AssetPage() {
           </div>
         </div>
 
-        {quote && portfolioQuery.data ? (
-          <OrderTicket
-            symbol={symbol}
-            price={quote.price}
-            cash={portfolioQuery.data.cash}
-            heldUnits={position?.units ?? 0}
-          />
-        ) : portfolioQuery.isError && !portfolioQuery.data ? (
-          <div className="flex h-72 flex-col items-center justify-center gap-3 rounded-xl border border-border text-center">
-            <p className="text-sm text-muted-foreground">
-              We couldn't load your portfolio.
-            </p>
-            <Button variant="outline" size="sm" onClick={() => portfolioQuery.refetch()}>
-              Try again
-            </Button>
-          </div>
-        ) : (
-          <Skeleton className="h-72 w-full rounded-xl" />
-        )}
+        <div className="flex flex-col gap-6">
+          {quote && portfolioQuery.data ? (
+            <OrderTicket
+              symbol={symbol}
+              price={quote.price}
+              cash={portfolioQuery.data.cash}
+              heldUnits={position?.units ?? 0}
+            />
+          ) : portfolioQuery.isError && !portfolioQuery.data ? (
+            <div className="flex h-72 flex-col items-center justify-center gap-3 rounded-xl border border-border text-center">
+              <p className="text-sm text-muted-foreground">
+                We couldn't load your portfolio.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => portfolioQuery.refetch()}>
+                Try again
+              </Button>
+            </div>
+          ) : (
+            <Skeleton className="h-72 w-full rounded-xl" />
+          )}
+
+          <AdvisorCard symbol={symbol} />
+        </div>
       </div>
     </div>
   )
