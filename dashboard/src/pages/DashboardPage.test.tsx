@@ -12,6 +12,10 @@ import type { EquitySeriesResponse } from '../types'
 vi.mock('../api/portfolio')
 vi.mock('../api/market')
 vi.mock('../api/watchlist')
+vi.mock('../api/advice', () => ({
+  getAdvice: () => Promise.resolve({ enabled: true, advice: null }),
+  generateAdvice: () => Promise.resolve({ enabled: true, advice: null }),
+}))
 
 function renderPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -135,5 +139,11 @@ describe('DashboardPage', () => {
       points: [{ ts: '2026-07-30T00:00:00Z', equity: 87000 }],
     })
     await screen.findByText('Portfolio Value') // let the update settle before the test ends
+  })
+
+  it('renders the advisor card', async () => {
+    renderPage()
+
+    expect(await screen.findByText(/^Advisor$/)).toBeInTheDocument()
   })
 })

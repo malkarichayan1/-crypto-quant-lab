@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { getMarketAssets } from '../api/market'
 import { getPortfolio, getPortfolioEquity } from '../api/portfolio'
 import { useWatchlist } from '../hooks/useWatchlist'
+import { AdvisorCard } from '../components/AdvisorCard'
 import { CoinIcon } from '../components/CoinIcon'
 import { MarketCard } from '../components/MarketCard'
 import { PortfolioEquityChart } from '../components/PortfolioEquityChart'
@@ -144,6 +145,8 @@ export function DashboardPage() {
         </div>
 
         <div className="flex flex-col gap-6">
+          <AdvisorCard />
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Watchlist</CardTitle>
