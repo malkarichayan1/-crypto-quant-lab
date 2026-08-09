@@ -33,6 +33,11 @@ class FakeMarketData:
         self.stale = False
         self.unavailable = False
 
+    def pair_for(self, symbol: str) -> str:
+        if symbol not in {q.symbol for q in self.quotes}:
+            raise UnknownSymbolError(symbol)
+        return f"{symbol}/USDT"
+
     def get_assets(self) -> AssetsSnapshot:
         if self.unavailable:
             raise PricesUnavailableError("market down")

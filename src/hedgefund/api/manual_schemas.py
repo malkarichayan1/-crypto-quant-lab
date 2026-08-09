@@ -107,3 +107,26 @@ class EquityPointOut(BaseModel):
 class EquitySeriesResponse(BaseModel):
     range: str
     points: list[EquityPointOut]
+
+
+class SuggestionActionOut(BaseModel):
+    side: Literal["buy", "sell"]
+    symbol: str
+    usd_amount: float
+
+
+class SuggestionOut(BaseModel):
+    text: str
+    why: str
+    action: SuggestionActionOut | None = None
+
+
+class AdvicePayloadOut(BaseModel):
+    suggestions: list[SuggestionOut]
+    disclaimer: str
+    source: Literal["llm", "template"]
+
+
+class AdviceResponse(BaseModel):
+    enabled: bool
+    advice: AdvicePayloadOut | None
