@@ -5,6 +5,8 @@ from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from typing import Literal
 
+from pydantic import BaseModel, Field, ValidationError
+
 from hedgefund.manual.market_data import AssetQuote
 from hedgefund.manual.signals import CoinSignal, PortfolioContext
 
@@ -205,3 +207,78 @@ def suggestions_to_payload(suggestions: Sequence[Suggestion], *, source: str) ->
         "disclaimer": DISCLAIMER,
         "source": source,
     }
+
+
+class AdviceParseError(ValueError):
+    """The LLM response could not be read as advice. Caller falls back to templates."""
+
+
+class _LLMAction(BaseModel):
+    side: Literal["buy", "sell"]
+    symbol: str
+    usd_amount: float = Field(gt=0)
+
+
+class _LLMSuggestion(BaseModel):
+    text: str = Field(min_length=1, max_length=300)
+    why: str = Field(min_length=1, max_length=800)
+    action: _LLMAction | None = None
+
+
+class _LLMAdvice(BaseModel):
+    suggestions: list[_LLMSuggestion] = Field(min_length=1)
+
+
+def _extract_json_object(text: str) -> str:
+    """Pull the outermost {...} out of a response that may carry code fences or
+    a chatty preamble. Models do this often enough that failing on it would
+    push us to the template fallback for no good reason."""
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        raise AdviceParseError("no JSON object found in response")
+    return text[start : end + 1]
+
+
+def _action_is_safe(
+    action: _LLMAction, *, known_symbols: set[str], cash: float, holdings: dict[str, float]
+) -> bool:
+    """Would this action survive POST /portfolio/orders right now?
+
+    A one-tap button that is guaranteed to 400 is worse than no button, so an
+    unsafe action is dropped while the suggestion's text is kept.
+    """
+    if action.symbol not in known_symbols:
+        return False
+    if action.side == "buy":
+        return action.usd_amount <= cash
+    return action.usd_amount <= holdings.get(action.symbol, 0.0)
+
+
+def parse_llm_advice(
+    raw: str, *, known_symbols: set[str], cash: float, holdings: dict[str, float]
+) -> list[Suggestion]:
+    """Parse and sanity-check an LLM advice response.
+
+    `holdings` maps symbol → current market value in USD.
+    Raises AdviceParseError on anything unusable; the caller then falls back to
+    template_advice().
+    """
+    try:
+        parsed = _LLMAdvice.model_validate_json(_extract_json_object(raw))
+    except (ValidationError, ValueError) as exc:
+        raise AdviceParseError(str(exc)) from exc
+
+    out: list[Suggestion] = []
+    for item in parsed.suggestions[:MAX_SUGGESTIONS]:
+        action = None
+        if item.action is not None and _action_is_safe(
+            item.action, known_symbols=known_symbols, cash=cash, holdings=holdings
+        ):
+            action = SuggestionAction(
+                side=item.action.side,
+                symbol=item.action.symbol,
+                usd_amount=item.action.usd_amount,
+            )
+        out.append(Suggestion(text=item.text, why=item.why, action=action))
+    return out

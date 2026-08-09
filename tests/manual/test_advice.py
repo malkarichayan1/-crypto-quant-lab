@@ -178,3 +178,110 @@ def test_suggestions_to_payload_serializes_suggestions_and_action():
         "disclaimer": adv.DISCLAIMER,
         "source": "llm",
     }
+
+
+# ---- LLM response parsing ----
+
+_GOOD = """{"suggestions": [
+  {"text": "Consider buying BTC", "why": "It is oversold.",
+   "action": {"side": "buy", "symbol": "BTC", "usd_amount": 100}},
+  {"text": "Watch ETH", "why": "Nothing to do yet.", "action": null}
+]}"""
+
+
+def test_parse_llm_advice_reads_a_well_formed_response():
+    parsed = adv.parse_llm_advice(_GOOD, known_symbols={"BTC", "ETH"},
+                                  cash=1_000.0, holdings={})
+
+    assert len(parsed) == 2
+    assert parsed[0].action.side == "buy"
+    assert parsed[0].action.usd_amount == 100
+    assert parsed[1].action is None
+
+
+def test_parse_llm_advice_tolerates_markdown_code_fences():
+    fenced = f"```json\n{_GOOD}\n```"
+
+    parsed = adv.parse_llm_advice(fenced, known_symbols={"BTC", "ETH"},
+                                  cash=1_000.0, holdings={})
+
+    assert len(parsed) == 2
+
+
+def test_parse_llm_advice_tolerates_leading_prose():
+    noisy = f"Sure! Here is my advice:\n\n{_GOOD}"
+
+    parsed = adv.parse_llm_advice(noisy, known_symbols={"BTC", "ETH"},
+                                  cash=1_000.0, holdings={})
+
+    assert len(parsed) == 2
+
+
+def test_parse_llm_advice_rejects_non_json():
+    with pytest.raises(adv.AdviceParseError):
+        adv.parse_llm_advice("I cannot help with that.",
+                             known_symbols={"BTC"}, cash=1_000.0, holdings={})
+
+
+def test_parse_llm_advice_rejects_an_empty_suggestion_list():
+    with pytest.raises(adv.AdviceParseError):
+        adv.parse_llm_advice('{"suggestions": []}',
+                             known_symbols={"BTC"}, cash=1_000.0, holdings={})
+
+
+def test_parse_llm_advice_caps_the_suggestion_count():
+    many = json.dumps({"suggestions": [
+        {"text": f"t{i}", "why": "w", "action": None} for i in range(9)
+    ]})
+
+    parsed = adv.parse_llm_advice(many, known_symbols={"BTC"}, cash=1_000.0, holdings={})
+
+    assert len(parsed) == adv.MAX_SUGGESTIONS
+
+
+def test_parse_llm_advice_strips_an_unaffordable_buy_but_keeps_the_text():
+    body = json.dumps({"suggestions": [
+        {"text": "Buy a lot of BTC", "why": "why",
+         "action": {"side": "buy", "symbol": "BTC", "usd_amount": 999_999}}
+    ]})
+
+    parsed = adv.parse_llm_advice(body, known_symbols={"BTC"}, cash=100.0, holdings={})
+
+    assert parsed[0].text == "Buy a lot of BTC"
+    assert parsed[0].action is None
+
+
+def test_parse_llm_advice_strips_a_sell_of_an_unheld_coin():
+    body = json.dumps({"suggestions": [
+        {"text": "Sell ETH", "why": "why",
+         "action": {"side": "sell", "symbol": "ETH", "usd_amount": 50}}
+    ]})
+
+    parsed = adv.parse_llm_advice(body, known_symbols={"BTC", "ETH"},
+                                  cash=1_000.0, holdings={})
+
+    assert parsed[0].action is None
+
+
+def test_parse_llm_advice_keeps_a_sell_within_the_held_value():
+    body = json.dumps({"suggestions": [
+        {"text": "Trim ETH", "why": "why",
+         "action": {"side": "sell", "symbol": "ETH", "usd_amount": 40}}
+    ]})
+
+    parsed = adv.parse_llm_advice(body, known_symbols={"BTC", "ETH"},
+                                  cash=1_000.0, holdings={"ETH": 100.0})
+
+    assert parsed[0].action.side == "sell"
+    assert parsed[0].action.usd_amount == 40
+
+
+def test_parse_llm_advice_strips_an_action_for_an_unknown_symbol():
+    body = json.dumps({"suggestions": [
+        {"text": "Buy DOGECOINX", "why": "why",
+         "action": {"side": "buy", "symbol": "DOGECOINX", "usd_amount": 10}}
+    ]})
+
+    parsed = adv.parse_llm_advice(body, known_symbols={"BTC"}, cash=1_000.0, holdings={})
+
+    assert parsed[0].action is None
