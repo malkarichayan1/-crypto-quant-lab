@@ -206,3 +206,28 @@ export interface EquitySeriesResponse {
   range: EquityRange
   points: ManualEquityPoint[]
 }
+
+// ---- Advisor (Phase 4) ----
+
+export interface SuggestionAction {
+  side: 'buy' | 'sell'
+  symbol: string
+  usd_amount: number
+}
+
+export interface AdviceSuggestion {
+  text: string
+  why: string
+  action: SuggestionAction | null
+}
+
+export interface AdvicePayload {
+  suggestions: AdviceSuggestion[]
+  disclaimer: string
+  source: 'llm' | 'template'
+}
+
+export interface AdviceResponse {
+  enabled: boolean
+  advice: AdvicePayload | null
+}
