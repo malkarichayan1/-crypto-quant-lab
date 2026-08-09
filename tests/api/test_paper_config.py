@@ -18,9 +18,10 @@ def test_advisor_is_enabled_by_default(monkeypatch):
 
     monkeypatch.delenv("MANUAL_ADVISOR_ENABLED", raising=False)
     get_settings.cache_clear()
-
-    assert get_settings().advisor_enabled is True
-    get_settings.cache_clear()
+    try:
+        assert get_settings().advisor_enabled is True
+    finally:
+        get_settings.cache_clear()
 
 
 def test_advisor_can_be_disabled_by_env(monkeypatch):
@@ -28,6 +29,7 @@ def test_advisor_can_be_disabled_by_env(monkeypatch):
 
     monkeypatch.setenv("MANUAL_ADVISOR_ENABLED", "0")
     get_settings.cache_clear()
-
-    assert get_settings().advisor_enabled is False
-    get_settings.cache_clear()
+    try:
+        assert get_settings().advisor_enabled is False
+    finally:
+        get_settings.cache_clear()
