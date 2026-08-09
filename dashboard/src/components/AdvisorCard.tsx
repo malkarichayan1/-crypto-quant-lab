@@ -14,6 +14,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { generateAdvice, getAdvice } from '../api/advice'
+import { useAdvisorEnabled } from '../hooks/useAdvisorEnabled'
 import { usePlaceOrder } from '../hooks/usePlaceOrder'
 import { formatUsd } from '../lib/format'
 import type { AdviceResponse, SuggestionAction } from '../types'
@@ -60,10 +61,13 @@ export function AdvisorCard({ symbol }: Props) {
     onError: (error) => setOrderError(error.message),
   })
 
+  const userEnabled = useAdvisorEnabled()
+
   if (cached.isLoading) return <Skeleton className="h-40 rounded-xl" />
   // A disabled advisor renders nothing at all rather than an explanatory box —
-  // the kill switch exists to remove the surface, not to advertise it.
-  if (cached.data?.enabled === false) return null
+  // the kill switch exists to remove the surface, not to advertise it. Both the
+  // user's local preference and the server-side kill switch independently hide it.
+  if (!userEnabled || cached.data?.enabled === false) return null
 
   const advice = cached.data?.advice ?? null
 

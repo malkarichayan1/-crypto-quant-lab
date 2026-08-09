@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { Newspaper, Settings, Trophy } from 'lucide-react'
+import { Newspaper, Trophy } from 'lucide-react'
 import { AppShell } from './layout/AppShell'
 import { ComingSoon } from './components/ComingSoon'
 import { RedirectWithParams } from './components/RedirectWithParams'
@@ -7,6 +7,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { MarketsPage } from './pages/MarketsPage'
 import { AssetPage } from './pages/AssetPage'
 import { PortfolioPage } from './pages/PortfolioPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { NewRunPage } from './pages/NewRunPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { ResultPage } from './pages/ResultPage'
@@ -47,16 +48,7 @@ export default function App() {
             />
           }
         />
-        <Route
-          path="/settings"
-          element={
-            <ComingSoon
-              icon={Settings}
-              title="Settings"
-              description="Portfolio reset, starting cash, and advisor controls arrive in the final phase."
-            />
-          }
-        />
+        <Route path="/settings" element={<SettingsPage />} />
 
         {/* Strategy Lab — existing pages, new addresses */}
         <Route path="/lab/backtests" element={<NewRunPage />} />

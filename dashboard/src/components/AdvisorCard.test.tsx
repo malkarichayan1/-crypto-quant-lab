@@ -239,4 +239,13 @@ describe('AdvisorCard', () => {
 
     expect(await screen.findByText(/no suggestions right now/i)).toBeInTheDocument()
   })
+
+  it('renders nothing when the user has switched the advisor off', async () => {
+    window.localStorage.setItem('hedgefund.advisorEnabled', 'false')
+    getAdvice.mockResolvedValue(payload([SUGGESTION]))
+
+    const { container } = renderCard()
+
+    await waitFor(() => expect(container).toBeEmptyDOMElement())
+  })
 })
