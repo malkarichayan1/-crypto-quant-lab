@@ -10,12 +10,14 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
+from hedgefund.agents.llm import CallLLM
 from hedgefund.manual.market_data import (
     AssetQuote,
     MarketDataProvider,
     PricesUnavailableError,
     UnknownSymbolError,
 )
+from hedgefund.manual.portfolio_service import PortfolioViewData
 from hedgefund.manual.signals import CoinSignal, PortfolioContext, coin_signal, portfolio_context
 
 DISCLAIMER = "Simulated learning advice — not financial advice."
@@ -33,7 +35,7 @@ CACHE_TTL = timedelta(minutes=15)
 SIGNAL_RANGE = "1W"
 LLM_MAX_TOKENS = 1024
 
-_log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -313,12 +315,13 @@ def read_cached_advice(repo, portfolio_id: uuid.UUID, *, scope: str) -> dict | N
 
 
 def _gather_signals(
-    market: MarketDataProvider, symbols: Sequence[str]
+    market: MarketDataProvider, symbols: Sequence[str], *, scope: str
 ) -> list[CoinSignal]:
     """Signals for each symbol, skipping any the exchange cannot price.
 
     One bad symbol must not sink the whole advice request — the card degrades
-    to fewer facts rather than erroring.
+    to fewer facts rather than erroring. `scope` is only carried for logging,
+    so a failure for one scope's request is distinguishable from another's.
     """
     out: list[CoinSignal] = []
     for symbol in symbols:
@@ -326,12 +329,12 @@ def _gather_signals(
             series = market.get_candles(symbol, SIGNAL_RANGE)
             out.append(coin_signal(symbol, series.candles))
         except (UnknownSymbolError, PricesUnavailableError, ValueError) as exc:
-            _log.warning("advice: skipping %s (%s)", symbol, exc)
+            logger.warning("skipping %s for scope=%s (%s)", symbol, scope, exc)
     return out
 
 
 def generate_advice(
-    repo, market: MarketDataProvider, call_llm, *, view, scope: str
+    repo, market: MarketDataProvider, call_llm: CallLLM, *, view: PortfolioViewData, scope: str
 ) -> dict:
     """Produce (or reuse) an advice payload for `scope` and cache it.
 
@@ -344,12 +347,13 @@ def generate_advice(
 
     snapshot = market.get_assets()
     quotes = snapshot.assets
-    held = [p.symbol for p in view.positions]
 
-    symbols = [scope] if scope != PORTFOLIO_SCOPE else select_symbols(
-        held=held, quotes=quotes
-    )
-    signals = _gather_signals(market, symbols)
+    if scope == PORTFOLIO_SCOPE:
+        held = [p.symbol for p in view.positions]
+        symbols = select_symbols(held=held, quotes=quotes)
+    else:
+        symbols = [scope]
+    signals = _gather_signals(market, symbols, scope=scope)
     context = portfolio_context(
         equity=view.equity,
         cash=view.cash,
@@ -357,12 +361,16 @@ def generate_advice(
         positions=[(p.symbol, p.market_value) for p in view.positions],
     )
 
+    # Built outside the try block: a bug in prompt formatting is a real defect,
+    # not an "LLM unavailable" condition, and must not be masked by the
+    # template fallback below.
+    prompt = build_prompt(signals, context, scope=scope)
+
     suggestions: list[Suggestion]
     source = "llm"
     try:
         raw, _cost = call_llm(
-            [{"role": "user", "content": build_prompt(signals, context, scope=scope)}],
-            max_tokens=LLM_MAX_TOKENS,
+            [{"role": "user", "content": prompt}], max_tokens=LLM_MAX_TOKENS
         )
         suggestions = parse_llm_advice(
             raw,
@@ -371,10 +379,13 @@ def generate_advice(
             holdings={p.symbol: p.market_value for p in view.positions},
         )
     except Exception as exc:  # noqa: BLE001 — any LLM failure degrades, never breaks
-        _log.warning("advice: LLM unavailable, using template fallback (%s)", exc)
+        logger.warning("LLM unavailable for scope=%s, using template fallback (%s)", scope, exc)
         suggestions = template_advice(signals, context)
         source = "template"
 
     payload = suggestions_to_payload(suggestions, source=source)
+    # Two concurrent requests for the same scope could both miss the cache and
+    # both write here — accepted as a non-issue in this single-user app; the
+    # cost is one harmless extra row, not a correctness problem.
     repo.add_advice(view.portfolio_id, scope=scope, payload=payload)
     return payload

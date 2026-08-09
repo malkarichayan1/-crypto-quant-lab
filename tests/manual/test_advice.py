@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import json
+import uuid
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
 from hedgefund.manual import advice as adv
+from hedgefund.manual.portfolio_service import PortfolioViewData
 from hedgefund.manual.signals import CoinSignal, PortfolioContext
 from tests.fixtures.market import make_quote
 
@@ -290,33 +293,39 @@ def test_parse_llm_advice_strips_an_action_for_an_unknown_symbol():
 # ---- generation orchestration ----
 
 class _FakeRepo:
-    """Minimal stand-in for ManualRepository — only what advice.py calls."""
+    """Minimal stand-in for ManualRepository — only what advice.py calls.
+
+    Rows carry a real `generated_at` timestamp so tests can prove
+    `read_cached_advice` actually wires `not_before`/`CACHE_TTL` correctly,
+    rather than the fake unconditionally "finding" a match.
+    """
 
     def __init__(self):
-        self.rows: list[tuple[str, dict]] = []
+        self.rows: list[tuple[str, dict, datetime]] = []
         self.cleared = 0
 
     def get_fresh_advice(self, portfolio_id, *, scope, not_before):
-        for row_scope, payload in reversed(self.rows):
-            if row_scope == scope:
-                return type("Row", (), {"payload": payload, "generated_at": not_before})()
+        for row_scope, payload, generated_at in reversed(self.rows):
+            if row_scope == scope and generated_at >= not_before:
+                return type("Row", (), {"payload": payload, "generated_at": generated_at})()
         return None
 
     def add_advice(self, portfolio_id, *, scope, payload):
-        self.rows.append((scope, payload))
-        return type("Row", (), {"payload": payload})()
+        generated_at = datetime.now(timezone.utc)
+        self.rows.append((scope, payload, generated_at))
+        return type("Row", (), {"payload": payload, "generated_at": generated_at})()
 
     def clear_advice(self, portfolio_id):
         self.cleared += 1
         return 0
 
+    def backdate_last_row(self, delta: timedelta) -> None:
+        """Test helper: age the most recently added row by `delta`."""
+        scope, payload, generated_at = self.rows[-1]
+        self.rows[-1] = (scope, payload, generated_at - delta)
+
 
 def _view(cash=5_000.0, positions=()):
-    import uuid
-    from datetime import datetime, timezone
-
-    from hedgefund.manual.portfolio_service import PortfolioViewData
-
     return PortfolioViewData(
         portfolio_id=uuid.uuid4(), starting_cash=10_000.0, cash=cash,
         positions=tuple(positions), equity=10_000.0, today_pl=0.0,
@@ -390,8 +399,9 @@ def test_generate_advice_writes_the_result_to_the_cache(market_data):
 
 def test_generate_advice_reuses_a_fresh_cache_entry_without_calling_the_llm(market_data):
     repo = _FakeRepo()
-    repo.rows.append((adv.PORTFOLIO_SCOPE, {"suggestions": [], "source": "llm",
-                                            "disclaimer": adv.DISCLAIMER}))
+    repo.add_advice(_view().portfolio_id, scope=adv.PORTFOLIO_SCOPE,
+                    payload={"suggestions": [], "source": "llm",
+                             "disclaimer": adv.DISCLAIMER})
     called = []
 
     adv.generate_advice(repo, market_data,
@@ -399,6 +409,23 @@ def test_generate_advice_reuses_a_fresh_cache_entry_without_calling_the_llm(mark
                         view=_view(), scope=adv.PORTFOLIO_SCOPE)
 
     assert called == []
+
+
+def test_generate_advice_recalls_the_llm_once_the_cached_entry_expires(market_data):
+    # Proves CACHE_TTL/not_before are actually wired, not just present:
+    # a row aged past CACHE_TTL must be treated as stale, not fresh.
+    repo = _FakeRepo()
+    repo.add_advice(_view().portfolio_id, scope=adv.PORTFOLIO_SCOPE,
+                    payload={"suggestions": [], "source": "llm",
+                             "disclaimer": adv.DISCLAIMER})
+    repo.backdate_last_row(adv.CACHE_TTL + timedelta(seconds=1))
+    calls = []
+
+    adv.generate_advice(repo, market_data,
+                        lambda *a, **k: calls.append(1) or (_GOOD, 0.0),
+                        view=_view(), scope=adv.PORTFOLIO_SCOPE)
+
+    assert calls == [1]
 
 
 def test_read_cached_advice_returns_none_when_nothing_is_cached():
@@ -413,3 +440,19 @@ def test_generate_advice_for_a_single_coin_scopes_to_that_symbol(market_data):
                         view=_view(), scope="BTC")
 
     assert repo.rows[0][0] == "BTC"
+
+
+def test_gather_signals_skips_a_symbol_the_market_cannot_price_but_keeps_the_rest(market_data):
+    # market_data's default universe is {"BTC", "ETH"} — "NOPE" is unknown and
+    # must not sink the whole request.
+    signals = adv._gather_signals(
+        market_data, ["BTC", "NOPE", "ETH"], scope=adv.PORTFOLIO_SCOPE
+    )
+
+    assert {s.symbol for s in signals} == {"BTC", "ETH"}
+
+
+def test_gather_signals_returns_an_empty_list_when_every_symbol_fails(market_data):
+    signals = adv._gather_signals(market_data, ["NOPE"], scope=adv.PORTFOLIO_SCOPE)
+
+    assert signals == []
