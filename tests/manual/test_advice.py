@@ -254,6 +254,31 @@ def test_parse_llm_advice_strips_an_unaffordable_buy_but_keeps_the_text():
     assert parsed[0].action is None
 
 
+def test_parse_llm_advice_strips_a_buy_below_the_minimum_order():
+    body = json.dumps({"suggestions": [
+        {"text": "Buy a tiny bit of BTC", "why": "why",
+         "action": {"side": "buy", "symbol": "BTC", "usd_amount": 0.25}}
+    ]})
+
+    parsed = adv.parse_llm_advice(body, known_symbols={"BTC"}, cash=1_000.0, holdings={})
+
+    assert parsed[0].text == "Buy a tiny bit of BTC"
+    assert parsed[0].action is None
+
+
+def test_parse_llm_advice_strips_a_sell_below_the_minimum_order():
+    body = json.dumps({"suggestions": [
+        {"text": "Trim a sliver of ETH", "why": "why",
+         "action": {"side": "sell", "symbol": "ETH", "usd_amount": 0.50}}
+    ]})
+
+    parsed = adv.parse_llm_advice(body, known_symbols={"BTC", "ETH"},
+                                  cash=1_000.0, holdings={"ETH": 100.0})
+
+    assert parsed[0].text == "Trim a sliver of ETH"
+    assert parsed[0].action is None
+
+
 def test_parse_llm_advice_strips_a_sell_of_an_unheld_coin():
     body = json.dumps({"suggestions": [
         {"text": "Sell ETH", "why": "why",

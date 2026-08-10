@@ -17,6 +17,7 @@ from hedgefund.manual.market_data import (
     PricesUnavailableError,
     UnknownSymbolError,
 )
+from hedgefund.manual.portfolio_math import MIN_ORDER_USD
 from hedgefund.manual.portfolio_service import PortfolioViewData
 from hedgefund.manual.signals import CoinSignal, PortfolioContext, coin_signal, portfolio_context
 
@@ -266,6 +267,8 @@ def _action_is_safe(
     A one-tap button that is guaranteed to 400 is worse than no button, so an
     unsafe action is dropped while the suggestion's text is kept.
     """
+    if action.usd_amount < MIN_ORDER_USD:
+        return False
     if action.symbol not in known_symbols:
         return False
     if action.side == "buy":
