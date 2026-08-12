@@ -39,7 +39,12 @@ export function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['leaderboard'] })
       toast.success(`Portfolio reset to ${formatUsd(parsed)} ✓`)
     },
-    onError: () => setIsConfirmOpen(false),
+    // Destructive, irreversible action: on failure, keep the dialog open and
+    // show why — never fail silently, never auto-close so the user can see
+    // the error and choose to retry or cancel explicitly.
+    onError: (error: Error) => {
+      toast.error(error.message || 'Reset failed. Please try again.')
+    },
   })
 
   return (
@@ -118,8 +123,17 @@ export function SettingsPage() {
               holdings and order history will no longer be shown. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
+          {reset.isError && (
+            <p className="text-xs text-loss" role="alert">
+              {reset.error.message || 'Reset failed. Please try again.'}
+            </p>
+          )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsConfirmOpen(false)}>
+            <Button
+              variant="outline"
+              disabled={reset.isPending}
+              onClick={() => setIsConfirmOpen(false)}
+            >
               Cancel
             </Button>
             <Button

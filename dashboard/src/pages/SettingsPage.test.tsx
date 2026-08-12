@@ -6,7 +6,9 @@ import { SettingsPage } from './SettingsPage'
 
 const resetPortfolio = vi.fn()
 vi.mock('../api/portfolio', () => ({ resetPortfolio: (b: unknown) => resetPortfolio(b) }))
-vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
+const toastSuccess = vi.fn()
+const toastError = vi.fn()
+vi.mock('sonner', () => ({ toast: { success: (...a: unknown[]) => toastSuccess(...a), error: (...a: unknown[]) => toastError(...a) } }))
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
@@ -112,5 +114,56 @@ describe('SettingsPage', () => {
     await userEvent.type(input, '0')
 
     expect(screen.getByRole('button', { name: /reset portfolio/i })).toBeDisabled()
+  })
+
+  it('surfaces an error and keeps the dialog open when the reset fails', async () => {
+    resetPortfolio.mockRejectedValue(new Error('Server exploded'))
+    renderPage()
+
+    await userEvent.click(screen.getByRole('button', { name: /reset portfolio/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /yes, reset/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/server exploded/i)
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(toastSuccess).not.toHaveBeenCalled()
+    await waitFor(() => expect(toastError).toHaveBeenCalled())
+  })
+
+  it('disables the cancel button while a reset is pending', async () => {
+    let resolveReset: (value: { id: string; starting_cash: number; created_at: string }) => void =
+      () => {}
+    resetPortfolio.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveReset = resolve
+        }),
+    )
+    renderPage()
+
+    await userEvent.click(screen.getByRole('button', { name: /reset portfolio/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /yes, reset/i }))
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /cancel/i })).toBeDisabled())
+
+    resolveReset({ id: 'x', starting_cash: 100000, created_at: 'now' })
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled())
+  })
+
+  it('invalidates portfolio, advice, and leaderboard caches on a successful reset', async () => {
+    resetPortfolio.mockResolvedValue({ id: 'x', starting_cash: 100000, created_at: 'now' })
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    const spy = vi.spyOn(client, 'invalidateQueries')
+    render(
+      <QueryClientProvider client={client}>
+        <SettingsPage />
+      </QueryClientProvider>,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: /reset portfolio/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /yes, reset/i }))
+
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: ['portfolio'] }))
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['advice'] })
+    expect(spy).toHaveBeenCalledWith({ queryKey: ['leaderboard'] })
   })
 })
