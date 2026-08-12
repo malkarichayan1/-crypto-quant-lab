@@ -1,12 +1,12 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { Newspaper, Trophy } from 'lucide-react'
 import { AppShell } from './layout/AppShell'
-import { ComingSoon } from './components/ComingSoon'
 import { RedirectWithParams } from './components/RedirectWithParams'
 import { DashboardPage } from './pages/DashboardPage'
 import { MarketsPage } from './pages/MarketsPage'
 import { AssetPage } from './pages/AssetPage'
 import { PortfolioPage } from './pages/PortfolioPage'
+import { LeaderboardPage } from './pages/LeaderboardPage'
+import { NewsPage } from './pages/NewsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { NewRunPage } from './pages/NewRunPage'
 import { HistoryPage } from './pages/HistoryPage'
@@ -23,31 +23,13 @@ export default function App() {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        {/* Beginner surfaces — placeholders until Phases 2-5 */}
+        {/* Beginner surfaces */}
         <Route path="/" element={<DashboardPage />} />
         <Route path="/markets" element={<MarketsPage />} />
         <Route path="/coins/:symbol" element={<AssetPage />} />
         <Route path="/portfolio" element={<PortfolioPage />} />
-        <Route
-          path="/leaderboard"
-          element={
-            <ComingSoon
-              icon={Trophy}
-              title="Leaderboard"
-              description="You vs the AI strategies vs buy-and-hold Bitcoin. Coming in Phase 5."
-            />
-          }
-        />
-        <Route
-          path="/news"
-          element={
-            <ComingSoon
-              icon={Newspaper}
-              title="News"
-              description="Crypto headlines, refreshed automatically. Coming in Phase 5."
-            />
-          }
-        />
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/news" element={<NewsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
 
         {/* Strategy Lab — existing pages, new addresses */}
