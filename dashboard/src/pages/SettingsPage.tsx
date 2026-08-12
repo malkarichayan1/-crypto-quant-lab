@@ -114,7 +114,17 @@ export function SettingsPage() {
         </Card>
       </div>
 
-      <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+      <Dialog
+        open={isConfirmOpen}
+        onOpenChange={(open) => {
+          // Escape, overlay-click, and the built-in X button all dismiss via
+          // onOpenChange too — not just the Cancel button. Block all of them
+          // while a reset is in flight, or a delayed success would silently
+          // invalidate caches and toast after the user thought they'd backed out.
+          if (!open && reset.isPending) return
+          setIsConfirmOpen(open)
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Reset your portfolio?</DialogTitle>

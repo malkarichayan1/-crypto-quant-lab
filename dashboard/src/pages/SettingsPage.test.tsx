@@ -149,6 +149,29 @@ describe('SettingsPage', () => {
     await waitFor(() => expect(toastSuccess).toHaveBeenCalled())
   })
 
+  it('ignores Escape while a reset is pending, so the dialog stays open', async () => {
+    let resolveReset: (value: { id: string; starting_cash: number; created_at: string }) => void =
+      () => {}
+    resetPortfolio.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveReset = resolve
+        }),
+    )
+    renderPage()
+
+    await userEvent.click(screen.getByRole('button', { name: /reset portfolio/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /yes, reset/i }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /cancel/i })).toBeDisabled())
+
+    await userEvent.keyboard('{Escape}')
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    resolveReset({ id: 'x', starting_cash: 100000, created_at: 'now' })
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled())
+  })
+
   it('invalidates portfolio, advice, and leaderboard caches on a successful reset', async () => {
     resetPortfolio.mockResolvedValue({ id: 'x', starting_cash: 100000, created_at: 'now' })
     const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
