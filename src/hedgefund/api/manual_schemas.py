@@ -145,3 +145,19 @@ class NewsResponse(BaseModel):
     items: list[NewsItemOut]
     stale: bool
     fetched_at: datetime
+
+
+class LeaderboardRowOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    label: str
+    kind: Literal["you", "ai", "benchmark"]
+    start_date: datetime
+    total_return_pct: float
+    equity: float
+    sparkline: list[float]
+
+
+class LeaderboardResponse(BaseModel):
+    rows: list[LeaderboardRowOut]
+    stale: bool
