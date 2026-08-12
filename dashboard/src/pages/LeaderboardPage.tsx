@@ -101,7 +101,9 @@ export function LeaderboardPage() {
 
       <div className="flex flex-col gap-2">
         {rows.map((row, index) => (
-          <Row key={`${row.kind}-${row.label}`} row={row} rank={index + 1} />
+          // Paper session labels aren't unique (no DB constraint), so the
+          // index is a required tiebreaker, not just belt-and-suspenders.
+          <Row key={`${row.kind}-${row.label}-${index}`} row={row} rank={index + 1} />
         ))}
       </div>
     </div>
