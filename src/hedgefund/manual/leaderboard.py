@@ -3,16 +3,18 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Literal
 
 SPARKLINE_POINTS = 40
 
 Point = tuple[datetime, float]
+Kind = Literal["you", "ai", "benchmark"]
 
 
 @dataclass(frozen=True)
 class LeaderboardRow:
     label: str
-    kind: str  # "you" | "ai" | "benchmark"
+    kind: Kind
     start_date: datetime
     total_return_pct: float
     equity: float
@@ -31,7 +33,7 @@ def _downsample(values: Sequence[float], target: int = SPARKLINE_POINTS) -> tupl
 
 
 def row_from_series(
-    label: str, points: Sequence[Point], *, starting_cash: float, kind: str = "you"
+    label: str, points: Sequence[Point], *, starting_cash: float, kind: Kind = "you"
 ) -> LeaderboardRow | None:
     """Build one row from an equity series. None when there is nothing to show.
 
