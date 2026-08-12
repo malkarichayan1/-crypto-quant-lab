@@ -130,3 +130,18 @@ class AdvicePayloadOut(BaseModel):
 class AdviceResponse(BaseModel):
     enabled: bool
     advice: AdvicePayloadOut | None
+
+
+class NewsItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    title: str
+    source: str
+    url: str
+    published_at: datetime | None
+
+
+class NewsResponse(BaseModel):
+    items: list[NewsItemOut]
+    stale: bool
+    fetched_at: datetime
