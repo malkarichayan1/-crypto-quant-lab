@@ -26,3 +26,15 @@ export function placeOrder(body: PlaceOrderRequest): Promise<ManualOrder> {
     body: JSON.stringify(body),
   })
 }
+
+export function resetPortfolio(body: { starting_cash: number }): Promise<{
+  id: string
+  starting_cash: number
+  created_at: string
+}> {
+  return apiFetch('/portfolio/reset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
