@@ -8,6 +8,7 @@ from hedgefund.agents.llm import CallLLM, call_llm as _call_llm
 from hedgefund.data.panel import PricePanel, load_panel
 from hedgefund.data.universe import KRAKEN_LIVE_UNIVERSE
 from hedgefund.manual.market_data import MarketDataCache
+from hedgefund.manual.news import NewsCache
 
 PanelLoader = Callable[[list[str], date, date], PricePanel]
 
@@ -53,3 +54,16 @@ def get_market_data() -> MarketDataCache:
     import ccxt  # local import: only needed when serving live market data
 
     return MarketDataCache(exchange=ccxt.kraken(), universe=KRAKEN_LIVE_UNIVERSE)
+
+
+@lru_cache
+def get_news_cache() -> NewsCache:
+    """Singleton NewsCache over the default free RSS feeds.
+
+    lru_cache for the same reason as get_market_data: FastAPI dispatches sync
+    dependency callables to a worker thread pool, so two concurrent first
+    requests could otherwise build two caches and double the outbound fetches.
+
+    Overridden in tests via app.dependency_overrides.
+    """
+    return NewsCache()

@@ -231,3 +231,32 @@ export interface AdviceResponse {
   enabled: boolean
   advice: AdvicePayload | null
 }
+
+// ---- News + Leaderboard (Phase 5) ----
+
+export interface NewsItem {
+  title: string
+  source: string
+  url: string
+  published_at: string | null
+}
+
+export interface NewsResponse {
+  items: NewsItem[]
+  stale: boolean
+  fetched_at: string
+}
+
+export interface LeaderboardRow {
+  label: string
+  kind: 'you' | 'ai' | 'benchmark'
+  start_date: string
+  total_return_pct: number
+  equity: number
+  sparkline: number[]
+}
+
+export interface LeaderboardResponse {
+  rows: LeaderboardRow[]
+  stale: boolean
+}
