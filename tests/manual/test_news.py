@@ -159,3 +159,16 @@ def test_cache_caps_the_item_count():
     cache = NewsCache(_fetcher({"https://example.test/rss": many}), feeds=FEEDS, limit=20)
 
     assert len(cache.get_news().items) == 20
+
+
+def test_parse_feed_treats_an_unrepresentable_date_as_undated_not_a_crash():
+    # year 1 parses to a valid struct_time that time.mktime cannot represent.
+    body = _RSS.replace("Fri, 08 Aug 2026 12:00:00 GMT", "Mon, 01 Jan 0001 00:00:00 GMT")
+
+    items = parse_feed(body, source="Example")
+
+    assert len(items) == 2
+    dated = next(i for i in items if i.title == "Ethereum does another thing")
+    undated = next(i for i in items if i.title == "Bitcoin does a thing")
+    assert dated.published_at is not None
+    assert undated.published_at is None

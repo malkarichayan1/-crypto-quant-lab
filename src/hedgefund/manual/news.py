@@ -41,11 +41,19 @@ class NewsSnapshot:
 
 
 def _published(entry) -> datetime | None:
-    """feedparser normalizes every date dialect into a struct_time, or omits it."""
+    """feedparser normalizes every date dialect into a struct_time, or omits it.
+
+    A pathological (but syntactically valid) date — e.g. year 1 — parses to a
+    struct_time that time.mktime/datetime.fromtimestamp can't represent. That's
+    one malformed entry, not a reason to lose the rest of the feed.
+    """
     parsed = getattr(entry, "published_parsed", None) or getattr(entry, "updated_parsed", None)
     if parsed is None:
         return None
-    return datetime.fromtimestamp(time.mktime(parsed), tz=timezone.utc)
+    try:
+        return datetime.fromtimestamp(time.mktime(parsed), tz=timezone.utc)
+    except (OverflowError, OSError, ValueError):
+        return None
 
 
 def parse_feed(body: str, *, source: str) -> list[NewsItem]:
