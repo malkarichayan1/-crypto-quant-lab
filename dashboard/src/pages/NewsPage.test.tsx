@@ -75,6 +75,19 @@ describe('NewsPage', () => {
     expect(screen.queryByText(/ago/i)).not.toBeInTheDocument()
   })
 
+  it('omits the age rather than showing NaN for an unparsable date', async () => {
+    getNews.mockResolvedValue({
+      items: [{ ...ITEM, published_at: 'not-a-date' }], stale: false,
+      fetched_at: '2026-08-08T12:00:00Z',
+    })
+
+    renderPage()
+
+    await screen.findByText('CoinDesk')
+    expect(screen.queryByText(/ago/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/nan/i)).not.toBeInTheDocument()
+  })
+
   it('shows an empty state when there is no news', async () => {
     getNews.mockResolvedValue({ items: [], stale: false, fetched_at: '2026-08-08T12:00:00Z' })
 

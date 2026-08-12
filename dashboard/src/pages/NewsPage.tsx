@@ -10,6 +10,7 @@ const POLL_INTERVAL_MS = 600_000 // matches the server's 10-minute cache
 function relativeAge(iso: string | null): string | null {
   if (!iso) return null
   const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000)
+  if (Number.isNaN(minutes)) return null
   if (minutes < 1) return 'just now'
   if (minutes < 60) return `${minutes}m ago`
   const hours = Math.floor(minutes / 60)
