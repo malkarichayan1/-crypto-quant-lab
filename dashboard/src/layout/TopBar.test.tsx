@@ -22,7 +22,7 @@ function renderBar() {
       <MemoryRouter>
         <Routes>
           <Route path="*" element={<TopBar />} />
-          <Route path="/coins/:symbol" element={<><TopBar /><Probe /></>} />
+          <Route path="/app/coins/:symbol" element={<><TopBar /><Probe /></>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -35,18 +35,18 @@ function renderPersistent() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/']}>
+      <MemoryRouter initialEntries={['/app']}>
         <TopBar />
         <Routes>
           <Route
-            path="/"
+            path="/app"
             element={
               <nav>
-                <Link to="/portfolio">Portfolio</Link>
+                <Link to="/app/portfolio">Portfolio</Link>
               </nav>
             }
           />
-          <Route path="/portfolio" element={<p>portfolio content</p>} />
+          <Route path="/app/portfolio" element={<p>portfolio content</p>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,

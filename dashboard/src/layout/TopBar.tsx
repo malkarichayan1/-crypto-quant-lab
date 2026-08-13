@@ -44,7 +44,7 @@ export function TopBar() {
 
   const select = (symbol: string) => {
     setQuery('')
-    navigate(`/coins/${symbol}`)
+    navigate(`/app/coins/${symbol}`)
   }
 
   // TopBar is mounted once at the AppShell level, outside the <Outlet> that
@@ -130,7 +130,7 @@ export function TopBar() {
       <div className="ml-auto flex items-center gap-4">
         {portfolio && (
           <Link
-            to="/portfolio"
+            to="/app/portfolio"
             className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 outline-none transition-colors duration-200 hover:bg-accent focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:flex"
           >
             <span className="text-xs font-medium tabular-nums">
