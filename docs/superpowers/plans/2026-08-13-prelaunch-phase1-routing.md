@@ -921,6 +921,95 @@ git commit -m "feat(seo): add robots.txt and sitemap.xml"
 
 ---
 
+### Task 9: Fix stale in-page /markets links
+
+**Files:**
+- Modify: `dashboard/src/pages/DashboardPage.tsx`
+- Modify: `dashboard/src/pages/AssetPage.tsx`
+- Modify: `dashboard/src/pages/AssetPage.test.tsx`
+- Modify: `dashboard/src/pages/PortfolioPage.tsx`
+- Modify: `dashboard/src/pages/PortfolioPage.test.tsx`
+
+A repo-wide audit for hardcoded `to="/..."` links turned up three page-level
+links that Tasks 2–3 didn't touch (those only covered `Sidebar`/`TopBar`):
+`DashboardPage.tsx`, `AssetPage.tsx`, and `PortfolioPage.tsx` each have a
+`<Link to="/markets">`. The `STATIC_REDIRECTS` table from Task 1 means these
+still technically work post-split (an extra client-side redirect hop through
+`/markets` → `/app/markets`), but a pre-launch app shouldn't ship internal
+links that immediately redirect — fix them at the source now, while this
+plan is still unexecuted.
+
+- [ ] **Step 1: Update the failing test expectations**
+
+In `dashboard/src/pages/AssetPage.test.tsx`, change:
+
+```tsx
+    expect(screen.getByRole('link', { name: /back to markets/i })).toHaveAttribute(
+      'href',
+      '/markets',
+    )
+```
+
+to:
+
+```tsx
+    expect(screen.getByRole('link', { name: /back to markets/i })).toHaveAttribute(
+      'href',
+      '/app/markets',
+    )
+```
+
+In `dashboard/src/pages/PortfolioPage.test.tsx`, change:
+
+```tsx
+    expect(screen.getByRole('link', { name: /explore markets/i })).toHaveAttribute(
+      'href', '/markets',
+    )
+```
+
+to:
+
+```tsx
+    expect(screen.getByRole('link', { name: /explore markets/i })).toHaveAttribute(
+      'href', '/app/markets',
+    )
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `cd dashboard && npm test -- src/pages/AssetPage.test.tsx src/pages/PortfolioPage.test.tsx`
+Expected: FAIL — both hrefs still `/markets`
+
+- [ ] **Step 3: Fix the three source links**
+
+In `dashboard/src/pages/DashboardPage.tsx`, line 117, change
+`<Link to="/markets" ...>` to `<Link to="/app/markets" ...>`.
+
+In `dashboard/src/pages/AssetPage.tsx`, line 76, change
+`<Link to="/markets">Back to Markets</Link>` to
+`<Link to="/app/markets">Back to Markets</Link>`.
+
+In `dashboard/src/pages/PortfolioPage.tsx`, line 50, change
+`<Link to="/markets">Explore Markets</Link>` to
+`<Link to="/app/markets">Explore Markets</Link>`.
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `cd dashboard && npm test -- src/pages/AssetPage.test.tsx src/pages/PortfolioPage.test.tsx src/pages/DashboardPage.test.tsx`
+Expected: PASS (`DashboardPage.test.tsx` had no assertion on this link, so it
+was already passing — this just confirms the fix didn't break it)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add dashboard/src/pages/DashboardPage.tsx dashboard/src/pages/AssetPage.tsx \
+  dashboard/src/pages/AssetPage.test.tsx dashboard/src/pages/PortfolioPage.tsx \
+  dashboard/src/pages/PortfolioPage.test.tsx
+git commit -m "fix(routing): point in-page Markets links at /app/markets"
+```
+
+---
+
 ## Phase 1 exit check
 
 After Task 8, run both full suites once more before moving to Phase 2:
