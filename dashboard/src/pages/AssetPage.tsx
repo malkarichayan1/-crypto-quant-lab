@@ -73,7 +73,7 @@ export function AssetPage() {
           We couldn't find that coin.
         </p>
         <Button asChild variant="outline">
-          <Link to="/markets">Back to Markets</Link>
+          <Link to="/app/markets">Back to Markets</Link>
         </Button>
       </div>
     )

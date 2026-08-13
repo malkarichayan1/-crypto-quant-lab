@@ -29,7 +29,7 @@ function renderRow(overrides: Partial<Parameters<typeof AssetRow>[0]> = {}) {
 describe('AssetRow', () => {
   it('links to the trade view and shows name, price, and change', () => {
     renderRow()
-    expect(screen.getByRole('link')).toHaveAttribute('href', '/coins/BTC')
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/app/coins/BTC')
     expect(screen.getByText('Bitcoin')).toBeInTheDocument()
     expect(screen.getByText('$64,231.50')).toBeInTheDocument()
     expect(screen.getByText('+2.31%')).toBeInTheDocument()

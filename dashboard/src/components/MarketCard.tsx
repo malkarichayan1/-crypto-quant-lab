@@ -9,7 +9,7 @@ import type { AssetQuote } from '../types'
 export function MarketCard({ asset }: { asset: AssetQuote }) {
   const isPositive = asset.change_24h_pct >= 0
   return (
-    <Link to={`/coins/${asset.symbol}`}>
+    <Link to={`/app/coins/${asset.symbol}`}>
       <Card className="transition-colors duration-200 hover:border-primary/40">
         <CardContent className="flex items-center gap-3 p-4">
           <CoinIcon symbol={asset.symbol} className="size-8 text-[10px]" />

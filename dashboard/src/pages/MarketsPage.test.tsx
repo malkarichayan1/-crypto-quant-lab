@@ -57,7 +57,7 @@ describe('MarketsPage', () => {
     renderPage()
     await screen.findByText('Bitcoin')
     const links = screen.getAllByRole('link')
-    expect(links[0]).toHaveAttribute('href', '/coins/SOL')
+    expect(links[0]).toHaveAttribute('href', '/app/coins/SOL')
   })
 
   it('filters rows by search query', async () => {

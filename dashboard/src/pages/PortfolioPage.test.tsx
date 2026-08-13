@@ -89,7 +89,7 @@ describe('PortfolioPage', () => {
       await screen.findByText(/don't own any coins yet/i),
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /explore markets/i })).toHaveAttribute(
-      'href', '/markets',
+      'href', '/app/markets',
     )
   })
 

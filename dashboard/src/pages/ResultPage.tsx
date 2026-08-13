@@ -28,7 +28,7 @@ export function ResultPage() {
       </div>
       <TradeLogTable trades={data.trade_log} />
       <div style={{ marginTop: 'var(--space-3)' }}>
-        <Link to={`/paper?source_backtest_id=${id}`} className="paper-trade-link">
+        <Link to={`/app/lab/paper?source_backtest_id=${id}`} className="paper-trade-link">
           Paper trade this →
         </Link>
       </div>

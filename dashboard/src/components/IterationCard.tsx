@@ -14,7 +14,7 @@ export function IterationCard({ event }: Props) {
         <span className="iteration-num">Iteration {iteration_index + 1}</span>
         {failed && <span className="badge-failed">failed</span>}
         {backtest_id && (
-          <Link to={`/backtests/${backtest_id}`} className="iteration-link">
+          <Link to={`/app/lab/backtests/${backtest_id}`} className="iteration-link">
             View backtest →
           </Link>
         )}

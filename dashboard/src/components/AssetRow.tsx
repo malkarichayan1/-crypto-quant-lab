@@ -16,7 +16,7 @@ export function AssetRow({ asset, isStarred, onToggleStar }: Props) {
   const isPositive = asset.change_24h_pct >= 0
   return (
     <Link
-      to={`/coins/${asset.symbol}`}
+      to={`/app/coins/${asset.symbol}`}
       className="flex items-center gap-4 rounded-xl border border-transparent px-3 py-2.5 transition-colors duration-200 hover:border-border hover:bg-card"
     >
       <CoinIcon symbol={asset.symbol} />

@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getAgentRun, useAgentRunEvents } from '../api/agentRuns'
 import { IterationCard } from '../components/IterationCard'
@@ -44,7 +44,7 @@ export function AgentResultPage() {
       {runDone?.winner_backtest_id && (
         <p className="pos">
           Best run:{' '}
-          <a href={`/backtests/${runDone.winner_backtest_id}`}>view result →</a>
+          <Link to={`/app/lab/backtests/${runDone.winner_backtest_id}`}>view result →</Link>
         </p>
       )}
     </div>

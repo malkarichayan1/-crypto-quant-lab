@@ -13,7 +13,7 @@ export function RunCard({ summary, onDelete }: Props) {
 
   return (
     <div className="run-card">
-      <Link to={`/backtests/${summary.id}`} className="run-card-title">
+      <Link to={`/app/lab/backtests/${summary.id}`} className="run-card-title">
         {summary.name}
       </Link>
       <span className="run-card-date">{date}</span>

@@ -114,7 +114,7 @@ export function DashboardPage() {
               {!portfolioFailed && portfolio && portfolio.positions.length === 0 && (
                 <p className="py-6 text-center text-sm text-muted-foreground">
                   You don't own any coins yet —{' '}
-                  <Link to="/markets" className="text-primary hover:underline">
+                  <Link to="/app/markets" className="text-primary hover:underline">
                     explore Markets
                   </Link>
                   .
@@ -124,7 +124,7 @@ export function DashboardPage() {
                 portfolio?.positions.map((p) => (
                   <Link
                     key={p.symbol}
-                    to={`/coins/${p.symbol}`}
+                    to={`/app/coins/${p.symbol}`}
                     className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors duration-200 hover:bg-accent"
                   >
                     <CoinIcon symbol={p.symbol} className="size-8 text-[10px]" />
@@ -160,7 +160,7 @@ export function DashboardPage() {
               {watchlistAssets.map((asset) => (
                 <Link
                   key={asset.symbol}
-                  to={`/coins/${asset.symbol}`}
+                  to={`/app/coins/${asset.symbol}`}
                   className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors duration-200 hover:bg-accent"
                 >
                   <CoinIcon symbol={asset.symbol} className="size-7 text-[10px]" />

@@ -47,7 +47,7 @@ function EmptyState() {
         You don't own any coins yet — find your first one in Markets.
       </p>
       <Button asChild variant="outline">
-        <Link to="/markets">Explore Markets</Link>
+        <Link to="/app/markets">Explore Markets</Link>
       </Button>
     </div>
   )

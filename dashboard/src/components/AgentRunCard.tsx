@@ -7,7 +7,7 @@ type Props = {
 
 export function AgentRunCard({ run }: Props) {
   return (
-    <Link to={`/research/runs/${run.id}`} className="agent-run-card">
+    <Link to={`/app/lab/research/runs/${run.id}`} className="agent-run-card">
       <div className="agent-run-goal">{run.goal}</div>
       <div className="agent-run-meta">
         <span className={`status-badge status-${run.status}`}>{run.status}</span>
