@@ -13,10 +13,10 @@ describe('AppShell', () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(
       <QueryClientProvider client={qc}>
-        <MemoryRouter initialEntries={['/']}>
+        <MemoryRouter initialEntries={['/app']}>
           <Routes>
             <Route element={<AppShell />}>
-              <Route path="/" element={<p>routed content</p>} />
+              <Route path="/app" element={<p>routed content</p>} />
             </Route>
           </Routes>
         </MemoryRouter>
@@ -32,11 +32,11 @@ describe('AppShell', () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(
       <QueryClientProvider client={qc}>
-        <MemoryRouter initialEntries={['/']}>
+        <MemoryRouter initialEntries={['/app']}>
           <Routes>
             <Route element={<AppShell />}>
-              <Route path="/" element={<p>routed content</p>} />
-              <Route path="/lab/:section" element={<p>lab content</p>} />
+              <Route path="/app" element={<p>routed content</p>} />
+              <Route path="/app/lab/:section" element={<p>lab content</p>} />
             </Route>
           </Routes>
         </MemoryRouter>
@@ -46,15 +46,15 @@ describe('AppShell', () => {
     expect(content.closest('.legacy-scope')).not.toBeInTheDocument()
   })
 
-  it('applies legacy-scope on /lab/* routes', () => {
+  it('applies legacy-scope on /app/lab/* routes', () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(
       <QueryClientProvider client={qc}>
-        <MemoryRouter initialEntries={['/lab/backtests']}>
+        <MemoryRouter initialEntries={['/app/lab/backtests']}>
           <Routes>
             <Route element={<AppShell />}>
-              <Route path="/" element={<p>routed content</p>} />
-              <Route path="/lab/:section" element={<p>lab content</p>} />
+              <Route path="/app" element={<p>routed content</p>} />
+              <Route path="/app/lab/:section" element={<p>lab content</p>} />
             </Route>
           </Routes>
         </MemoryRouter>

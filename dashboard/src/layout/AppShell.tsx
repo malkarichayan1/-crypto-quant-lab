@@ -6,7 +6,9 @@ import { TopBar } from './TopBar'
 
 export function AppShell() {
   const location = useLocation()
-  const isLabRoute = location.pathname === '/lab' || location.pathname.startsWith('/lab/')
+  // AppShell is always mounted under /app (see App.tsx), so a single
+  // prefix check is enough — no bare /lab route exists to also match.
+  const isLabRoute = location.pathname.startsWith('/app/lab')
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
