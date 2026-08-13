@@ -60,10 +60,11 @@ describe('App routing', () => {
   it('renders the landing page at /', () => {
     renderAt('/')
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /start simulating/i })).toHaveAttribute(
-      'href',
-      '/app',
-    )
+    const ctas = screen.getAllByRole('link', { name: /start simulating/i })
+    expect(ctas.length).toBeGreaterThan(0)
+    for (const cta of ctas) {
+      expect(cta).toHaveAttribute('href', '/app')
+    }
   })
 
   it('renders the Dashboard at /app', () => {
