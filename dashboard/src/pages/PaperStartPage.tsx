@@ -24,7 +24,7 @@ export function PaperStartPage() {
       : { label, spec_json: safeParse(specText), starting_cash: startingCash }
     try {
       const session = await createPaperSession(body)
-      navigate(`/paper/sessions/${session.id}`)
+      navigate(`/app/lab/paper/sessions/${session.id}`)
     } catch (err) {
       setError((err as Error).message)
       setPending(false)

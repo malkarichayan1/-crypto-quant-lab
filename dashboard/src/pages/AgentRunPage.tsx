@@ -42,7 +42,7 @@ export function AgentRunPage() {
     }
     try {
       const run = await createAgentRun(body)
-      navigate(`/research/runs/${run.id}`)
+      navigate(`/app/lab/research/runs/${run.id}`)
     } catch (err) {
       setError((err as Error).message)
       setPending(false)

@@ -31,7 +31,7 @@ export function usePlaceOrder(options: Options = {}) {
       queryClient.invalidateQueries({ queryKey: ['advice'] })
       const verb = order.side === 'buy' ? 'Bought' : 'Sold'
       toast.success(`${verb} ${formatUsd(order.usd_amount)} of ${order.symbol} ✓`, {
-        action: { label: 'Portfolio', onClick: () => navigate('/portfolio') },
+        action: { label: 'Portfolio', onClick: () => navigate('/app/portfolio') },
       })
       options.onSuccess?.(order)
     },
