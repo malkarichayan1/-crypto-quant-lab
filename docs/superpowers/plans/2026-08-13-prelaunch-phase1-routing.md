@@ -921,7 +921,7 @@ git commit -m "feat(seo): add robots.txt and sitemap.xml"
 
 ---
 
-### Task 9: Fix stale in-page /markets links
+### Task 9: Fix stale in-page links across the whole component tree
 
 **Files:**
 - Modify: `dashboard/src/pages/DashboardPage.tsx`
@@ -929,28 +929,51 @@ git commit -m "feat(seo): add robots.txt and sitemap.xml"
 - Modify: `dashboard/src/pages/AssetPage.test.tsx`
 - Modify: `dashboard/src/pages/PortfolioPage.tsx`
 - Modify: `dashboard/src/pages/PortfolioPage.test.tsx`
+- Modify: `dashboard/src/pages/ResultPage.tsx`
+- Modify: `dashboard/src/pages/AgentResultPage.tsx`
+- Modify: `dashboard/src/components/AssetRow.tsx`
+- Modify: `dashboard/src/components/AssetRow.test.tsx`
+- Modify: `dashboard/src/components/MarketCard.tsx`
+- Modify: `dashboard/src/components/MarketCard.test.tsx`
+- Modify: `dashboard/src/pages/MarketsPage.test.tsx`
+- Modify: `dashboard/src/components/PositionsTable.tsx`
+- Modify: `dashboard/src/components/AgentRunCard.tsx`
+- Modify: `dashboard/src/components/IterationCard.tsx`
+- Modify: `dashboard/src/components/RunCard.tsx`
+- Modify: `dashboard/src/components/PaperSessionCard.tsx`
 
-A repo-wide audit for hardcoded `to="/..."` links turned up three page-level
-links that Tasks 2–3 didn't touch (those only covered `Sidebar`/`TopBar`):
-`DashboardPage.tsx`, `AssetPage.tsx`, and `PortfolioPage.tsx` each have a
-`<Link to="/markets">`. The `STATIC_REDIRECTS` table from Task 1 means these
-still technically work post-split (an extra client-side redirect hop through
-`/markets` → `/app/markets`), but a pre-launch app shouldn't ship internal
-links that immediately redirect — fix them at the source now, while this
-plan is still unexecuted.
+A repo-wide audit (`grep` for `to="/...`, `` to={`/...` ``, and
+`` href={`/...` `` across `dashboard/src`) found that Tasks 2–3 only fixed
+navigation chrome (`Sidebar`/`TopBar`) — every page-level and card-level
+internal link elsewhere in the app still points at a pre-split path. The
+`STATIC_REDIRECTS`/`PARAM_REDIRECTS` tables from Task 1 mean all of these
+still technically resolve (one extra client-side redirect hop), except
+`AgentResultPage.tsx`'s link, which is a plain `<a href>` rather than a
+router `Link` — clicking it triggers a full page reload, not a client-side
+transition. Fix all of it at the source now, while this plan is still
+unexecuted:
 
-- [ ] **Step 1: Update the failing test expectations**
+| File : line | Current | Fix |
+|---|---|---|
+| `DashboardPage.tsx:117` | `to="/markets"` | `to="/app/markets"` |
+| `DashboardPage.tsx:127` | `` to={`/coins/${p.symbol}`} `` | `` to={`/app/coins/${p.symbol}`} `` |
+| `DashboardPage.tsx:163` | `` to={`/coins/${asset.symbol}`} `` | `` to={`/app/coins/${asset.symbol}`} `` |
+| `AssetPage.tsx:76` | `to="/markets"` | `to="/app/markets"` |
+| `PortfolioPage.tsx:50` | `to="/markets"` | `to="/app/markets"` |
+| `AssetRow.tsx:19` | `` to={`/coins/${asset.symbol}`} `` | `` to={`/app/coins/${asset.symbol}`} `` |
+| `MarketCard.tsx:12` | `` to={`/coins/${asset.symbol}`} `` | `` to={`/app/coins/${asset.symbol}`} `` |
+| `PositionsTable.tsx:63` | `` to={`/coins/${p.symbol}`} `` | `` to={`/app/coins/${p.symbol}`} `` |
+| `ResultPage.tsx:31` | `` to={`/paper?source_backtest_id=${id}`} `` | `` to={`/app/lab/paper?source_backtest_id=${id}`} `` |
+| `AgentRunCard.tsx:10` | `` to={`/research/runs/${run.id}`} `` | `` to={`/app/lab/research/runs/${run.id}`} `` |
+| `IterationCard.tsx:17` | `` to={`/backtests/${backtest_id}`} `` | `` to={`/app/lab/backtests/${backtest_id}`} `` |
+| `RunCard.tsx:16` | `` to={`/backtests/${summary.id}`} `` | `` to={`/app/lab/backtests/${summary.id}`} `` |
+| `PaperSessionCard.tsx:8` | `` to={`/paper/sessions/${session.id}`} `` | `` to={`/app/lab/paper/sessions/${session.id}`} `` |
+| `AgentResultPage.tsx:47` | `` <a href={`/backtests/${runDone.winner_backtest_id}`}>view result →</a> `` | `` <Link to={`/app/lab/backtests/${runDone.winner_backtest_id}`}>view result →</Link> `` (also swap the plain `<a>` for a router `Link` — add `import { Link } from 'react-router-dom'` at the top of the file, alongside the existing `useParams` import) |
 
-In `dashboard/src/pages/AssetPage.test.tsx`, change:
+- [ ] **Step 1: Update the three failing test expectations**
 
-```tsx
-    expect(screen.getByRole('link', { name: /back to markets/i })).toHaveAttribute(
-      'href',
-      '/markets',
-    )
-```
-
-to:
+In `dashboard/src/pages/AssetPage.test.tsx`, change the `'/markets'` href
+assertion to `'/app/markets'`:
 
 ```tsx
     expect(screen.getByRole('link', { name: /back to markets/i })).toHaveAttribute(
@@ -959,15 +982,8 @@ to:
     )
 ```
 
-In `dashboard/src/pages/PortfolioPage.test.tsx`, change:
-
-```tsx
-    expect(screen.getByRole('link', { name: /explore markets/i })).toHaveAttribute(
-      'href', '/markets',
-    )
-```
-
-to:
+In `dashboard/src/pages/PortfolioPage.test.tsx`, change the `'/markets'`
+href assertion to `'/app/markets'`:
 
 ```tsx
     expect(screen.getByRole('link', { name: /explore markets/i })).toHaveAttribute(
@@ -975,37 +991,78 @@ to:
     )
 ```
 
+In `dashboard/src/components/AssetRow.test.tsx`, change:
+
+```tsx
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/coins/BTC')
+```
+
+to:
+
+```tsx
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/app/coins/BTC')
+```
+
+In `dashboard/src/components/MarketCard.test.tsx`, change:
+
+```tsx
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/coins/BTC')
+```
+
+to:
+
+```tsx
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/app/coins/BTC')
+```
+
+In `dashboard/src/pages/MarketsPage.test.tsx`, change:
+
+```tsx
+    expect(links[0]).toHaveAttribute('href', '/coins/SOL')
+```
+
+to:
+
+```tsx
+    expect(links[0]).toHaveAttribute('href', '/app/coins/SOL')
+```
+
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `cd dashboard && npm test -- src/pages/AssetPage.test.tsx src/pages/PortfolioPage.test.tsx`
-Expected: FAIL — both hrefs still `/markets`
+Run: `cd dashboard && npm test -- src/pages/AssetPage.test.tsx src/pages/PortfolioPage.test.tsx src/components/AssetRow.test.tsx src/components/MarketCard.test.tsx src/pages/MarketsPage.test.tsx`
+Expected: FAIL — all five still assert/render the pre-`/app` paths
 
-- [ ] **Step 3: Fix the three source links**
+- [ ] **Step 3: Apply every fix from the table above**
 
-In `dashboard/src/pages/DashboardPage.tsx`, line 117, change
-`<Link to="/markets" ...>` to `<Link to="/app/markets" ...>`.
-
-In `dashboard/src/pages/AssetPage.tsx`, line 76, change
-`<Link to="/markets">Back to Markets</Link>` to
-`<Link to="/app/markets">Back to Markets</Link>`.
-
-In `dashboard/src/pages/PortfolioPage.tsx`, line 50, change
-`<Link to="/markets">Explore Markets</Link>` to
-`<Link to="/app/markets">Explore Markets</Link>`.
+Edit each of the thirteen source files listed in the table, changing only
+the specific `to`/`href` value shown — no other logic changes. For
+`AgentResultPage.tsx`, also add the `Link` import and change the element
+from `<a href=...>` to `<Link to=...>` as noted in the table.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
-Run: `cd dashboard && npm test -- src/pages/AssetPage.test.tsx src/pages/PortfolioPage.test.tsx src/pages/DashboardPage.test.tsx`
-Expected: PASS (`DashboardPage.test.tsx` had no assertion on this link, so it
-was already passing — this just confirms the fix didn't break it)
+Run: `cd dashboard && npm test`
+Expected: PASS — full suite, since this touches enough files that a scoped
+run risks missing a knock-on failure (e.g. `DashboardPage.test.tsx`,
+`PositionsTable.test.tsx`, `AgentRunCard.test.tsx`, `IterationCard.test.tsx`,
+`RunCard.test.tsx`, `PaperSessionCard.test.tsx`, `ResultPage.test.tsx`,
+`AgentResultPage.test.tsx` didn't have an href assertion on these specific
+links as of this audit, so they were already green — this run confirms none
+of them silently relied on the old path some other way).
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add dashboard/src/pages/DashboardPage.tsx dashboard/src/pages/AssetPage.tsx \
   dashboard/src/pages/AssetPage.test.tsx dashboard/src/pages/PortfolioPage.tsx \
-  dashboard/src/pages/PortfolioPage.test.tsx
-git commit -m "fix(routing): point in-page Markets links at /app/markets"
+  dashboard/src/pages/PortfolioPage.test.tsx dashboard/src/pages/ResultPage.tsx \
+  dashboard/src/pages/AgentResultPage.tsx dashboard/src/components/AssetRow.tsx \
+  dashboard/src/components/AssetRow.test.tsx dashboard/src/components/MarketCard.tsx \
+  dashboard/src/components/MarketCard.test.tsx dashboard/src/pages/MarketsPage.test.tsx \
+  dashboard/src/components/PositionsTable.tsx dashboard/src/components/AgentRunCard.tsx \
+  dashboard/src/components/IterationCard.tsx dashboard/src/components/RunCard.tsx \
+  dashboard/src/components/PaperSessionCard.tsx
+git commit -m "fix(routing): point every in-page link at its /app path, and fix a plain <a> that skipped client-side routing"
 ```
 
 ---
