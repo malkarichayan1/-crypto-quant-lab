@@ -21,17 +21,17 @@ type NavItem = {
 }
 
 const MAIN_ITEMS: NavItem[] = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/markets', label: 'Markets', icon: CandlestickChart },
-  { to: '/portfolio', label: 'Portfolio', icon: Wallet },
-  { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { to: '/news', label: 'News', icon: Newspaper },
+  { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/app/markets', label: 'Markets', icon: CandlestickChart },
+  { to: '/app/portfolio', label: 'Portfolio', icon: Wallet },
+  { to: '/app/leaderboard', label: 'Leaderboard', icon: Trophy },
+  { to: '/app/news', label: 'News', icon: Newspaper },
 ]
 
 const LAB_ITEMS: NavItem[] = [
-  { to: '/lab/backtests', label: 'Backtests', icon: FlaskConical },
-  { to: '/lab/research', label: 'Research', icon: Bot },
-  { to: '/lab/paper', label: 'Paper Sessions', icon: Activity },
+  { to: '/app/lab/backtests', label: 'Backtests', icon: FlaskConical },
+  { to: '/app/lab/research', label: 'Research', icon: Bot },
+  { to: '/app/lab/paper', label: 'Paper Sessions', icon: Activity },
 ]
 
 function SidebarLink({ item }: { item: NavItem }) {
@@ -75,7 +75,7 @@ export function Sidebar() {
       </div>
 
       <div className="mt-auto border-t border-border pt-4">
-        <SidebarLink item={{ to: '/settings', label: 'Settings', icon: Settings }} />
+        <SidebarLink item={{ to: '/app/settings', label: 'Settings', icon: Settings }} />
       </div>
     </nav>
   )
