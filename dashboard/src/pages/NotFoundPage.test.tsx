@@ -35,4 +35,13 @@ describe('NotFoundPage', () => {
     )
     meta.remove()
   })
+
+  it('sets a distinct title and description', () => {
+    renderPage()
+    expect(document.title).toBe('Page not found — HedgeFund Simulator')
+    expect(document.querySelector('meta[name="description"]')).toHaveAttribute(
+      'content',
+      "The page you're looking for doesn't exist or may have moved.",
+    )
+  })
 })

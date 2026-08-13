@@ -1,15 +1,20 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export function NotFoundPage() {
-  useEffect(() => {
-    document.title = 'Page not found — HedgeFund Simulator'
+  usePageMeta(
+    'Page not found — HedgeFund Simulator',
+    "The page you're looking for doesn't exist or may have moved.",
+  )
 
+  useEffect(() => {
     // A soft 404: dashboard/vercel.json rewrites every path to index.html,
     // so Vercel always serves this with HTTP 200 — there's no real 404
     // status to rely on. This meta tag is how we tell crawlers not to
-    // index it.
+    // index it. Kept separate from usePageMeta, which only owns
+    // title/description.
     let meta = document.querySelector<HTMLMetaElement>('meta[name="robots"]')
     const isNewTag = !meta
     if (!meta) {

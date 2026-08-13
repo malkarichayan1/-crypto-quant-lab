@@ -20,4 +20,13 @@ describe('LandingPage', () => {
       '/app',
     )
   })
+
+  it('sets a unique title and description', () => {
+    renderPage()
+    expect(document.title).toBe('HedgeFund Simulator — Practice investing risk-free')
+    expect(document.querySelector('meta[name="description"]')).toHaveAttribute(
+      'content',
+      'Trade crypto with $100,000 in virtual cash, real market prices, and free AI advice. No real money, ever.',
+    )
+  })
 })
