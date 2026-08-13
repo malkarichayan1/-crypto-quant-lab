@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AppShell } from './layout/AppShell'
 import { RedirectWithParams } from './components/RedirectWithParams'
+import { LandingPage } from './pages/LandingPage'
+import { NotFoundPage } from './pages/NotFoundPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { MarketsPage } from './pages/MarketsPage'
 import { AssetPage } from './pages/AssetPage'
@@ -17,45 +19,54 @@ import { AgentHistoryPage } from './pages/AgentHistoryPage'
 import { PaperStartPage } from './pages/PaperStartPage'
 import { PaperHistoryPage } from './pages/PaperHistoryPage'
 import { PaperLivePage } from './pages/PaperLivePage'
+import { PARAM_REDIRECTS, STATIC_REDIRECTS } from './routes/legacyRedirects'
 
 export default function App() {
   const location = useLocation()
   return (
     <Routes>
+      {/* Public marketing surface — no AppShell */}
+      <Route path="/" element={<LandingPage />} />
+
       <Route element={<AppShell />}>
         {/* Beginner surfaces */}
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/markets" element={<MarketsPage />} />
-        <Route path="/coins/:symbol" element={<AssetPage />} />
-        <Route path="/portfolio" element={<PortfolioPage />} />
-        <Route path="/leaderboard" element={<LeaderboardPage />} />
-        <Route path="/news" element={<NewsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/app" element={<DashboardPage />} />
+        <Route path="/app/markets" element={<MarketsPage />} />
+        <Route path="/app/coins/:symbol" element={<AssetPage />} />
+        <Route path="/app/portfolio" element={<PortfolioPage />} />
+        <Route path="/app/leaderboard" element={<LeaderboardPage />} />
+        <Route path="/app/news" element={<NewsPage />} />
+        <Route path="/app/settings" element={<SettingsPage />} />
 
-        {/* Strategy Lab — existing pages, new addresses */}
-        <Route path="/lab/backtests" element={<NewRunPage />} />
-        <Route path="/lab/backtests/history" element={<HistoryPage />} />
-        <Route path="/lab/backtests/:id" element={<ResultPage />} />
-        <Route path="/lab/research" element={<AgentRunPage />} />
-        <Route path="/lab/research/history" element={<AgentHistoryPage />} />
-        <Route path="/lab/research/runs/:id" element={<AgentResultPage />} />
-        <Route path="/lab/paper" element={<PaperStartPage />} />
-        <Route path="/lab/paper/history" element={<PaperHistoryPage />} />
-        <Route path="/lab/paper/sessions/:id" element={<PaperLivePage />} />
-
-        {/* Legacy redirects — keep old bookmarks and in-app links working */}
-        <Route path="/history" element={<Navigate to="/lab/backtests/history" replace />} />
-        <Route path="/backtests/:id" element={<RedirectWithParams to="/lab/backtests/:id" />} />
-        <Route path="/research" element={<Navigate to="/lab/research" replace />} />
-        <Route path="/research/history" element={<Navigate to="/lab/research/history" replace />} />
-        <Route path="/research/runs/:id" element={<RedirectWithParams to="/lab/research/runs/:id" />} />
-        <Route
-          path="/paper"
-          element={<Navigate to={{ pathname: '/lab/paper', search: location.search }} replace />}
-        />
-        <Route path="/paper/history" element={<Navigate to="/lab/paper/history" replace />} />
-        <Route path="/paper/sessions/:id" element={<RedirectWithParams to="/lab/paper/sessions/:id" />} />
+        {/* Strategy Lab — existing pages */}
+        <Route path="/app/lab/backtests" element={<NewRunPage />} />
+        <Route path="/app/lab/backtests/history" element={<HistoryPage />} />
+        <Route path="/app/lab/backtests/:id" element={<ResultPage />} />
+        <Route path="/app/lab/research" element={<AgentRunPage />} />
+        <Route path="/app/lab/research/history" element={<AgentHistoryPage />} />
+        <Route path="/app/lab/research/runs/:id" element={<AgentResultPage />} />
+        <Route path="/app/lab/paper" element={<PaperStartPage />} />
+        <Route path="/app/lab/paper/history" element={<PaperHistoryPage />} />
+        <Route path="/app/lab/paper/sessions/:id" element={<PaperLivePage />} />
       </Route>
+
+      {/* Legacy redirects — every bookmark that worked before this /app
+          split (or before the older Strategy Lab rename) keeps working. */}
+      {Object.entries(STATIC_REDIRECTS).map(([from, to]) => (
+        <Route key={from} path={from} element={<Navigate to={to} replace />} />
+      ))}
+      {PARAM_REDIRECTS.map(({ from, to }) => (
+        <Route key={from} path={from} element={<RedirectWithParams to={to} />} />
+      ))}
+      <Route
+        path="/paper"
+        element={
+          <Navigate to={{ pathname: '/app/lab/paper', search: location.search }} replace />
+        }
+      />
+
+      {/* Unmatched path */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }
