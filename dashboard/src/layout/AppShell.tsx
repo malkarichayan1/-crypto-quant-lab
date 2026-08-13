@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { cn } from '@/lib/utils'
+import { PageMetaSync } from '../components/PageMetaSync'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 
@@ -12,6 +13,7 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <PageMetaSync />
       <TopBar />
       <div className="flex min-h-0 flex-1">
         <Sidebar />
