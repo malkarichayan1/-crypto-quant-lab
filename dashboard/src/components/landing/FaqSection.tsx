@@ -78,21 +78,23 @@ export function FaqSection() {
                   />
                 </button>
               </dt>
-              {isOpen && (
-                <dd id={panelId} className="px-4 pb-4 text-sm text-muted-foreground">
-                  {item.privacyLink ? (
-                    <>
-                      There's no account or password to create.{' '}
-                      <Link to="/privacy" className="underline underline-offset-2">
-                        See our Privacy Policy
-                      </Link>{' '}
-                      for the full picture.
-                    </>
-                  ) : (
-                    item.answer
-                  )}
-                </dd>
-              )}
+              <dd
+                id={panelId}
+                hidden={!isOpen}
+                className="px-4 pb-4 text-sm text-muted-foreground"
+              >
+                {item.privacyLink ? (
+                  <>
+                    There's no account or password to create.{' '}
+                    <Link to="/privacy" className="underline underline-offset-2">
+                      See our Privacy Policy
+                    </Link>{' '}
+                    for the full picture.
+                  </>
+                ) : (
+                  item.answer
+                )}
+              </dd>
             </div>
           )
         })}

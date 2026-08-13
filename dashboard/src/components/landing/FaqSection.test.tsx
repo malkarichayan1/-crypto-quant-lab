@@ -27,13 +27,17 @@ describe('FaqSection', () => {
     renderSection()
     const firstQuestion = screen.getByRole('button', { name: FAQ_ITEMS[0].question })
     expect(firstQuestion).toHaveAttribute('aria-expanded', 'false')
+    // The panel stays mounted (so aria-controls always resolves) but should
+    // not be visible while collapsed.
+    expect(screen.getByText(FAQ_ITEMS[0].answer)).not.toBeVisible()
 
     await user.click(firstQuestion)
     expect(firstQuestion).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByText(FAQ_ITEMS[0].answer)).toBeInTheDocument()
+    expect(screen.getByText(FAQ_ITEMS[0].answer)).toBeVisible()
 
     await user.click(firstQuestion)
     expect(firstQuestion).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByText(FAQ_ITEMS[0].answer)).not.toBeVisible()
   })
 
   it('links the data-collection answer to the Privacy Policy page', async () => {
