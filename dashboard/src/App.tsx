@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AppShell } from './layout/AppShell'
 import { RedirectWithParams } from './components/RedirectWithParams'
 import { LandingPage } from './pages/LandingPage'
+import { ThankYouPage } from './pages/ThankYouPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { MarketsPage } from './pages/MarketsPage'
@@ -27,6 +28,7 @@ export default function App() {
     <Routes>
       {/* Public marketing surface — no AppShell */}
       <Route path="/" element={<LandingPage />} />
+      <Route path="/thank-you" element={<ThankYouPage />} />
 
       <Route element={<AppShell />}>
         {/* Beginner surfaces */}

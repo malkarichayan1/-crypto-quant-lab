@@ -87,6 +87,15 @@ describe('App routing', () => {
     expect(screen.getByRole('heading', { name: 'Portfolio' })).toBeInTheDocument()
   })
 
+  it('renders the thank-you page at /thank-you', () => {
+    renderAt('/thank-you')
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /start simulating/i })).toHaveAttribute(
+      'href',
+      '/app',
+    )
+  })
+
   it('renders the 404 page for an unknown path with a noindex meta tag', () => {
     renderAt('/this-page-does-not-exist')
     expect(screen.getByRole('heading', { name: /page not found/i })).toBeInTheDocument()
