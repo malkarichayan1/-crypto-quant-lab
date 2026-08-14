@@ -15,6 +15,7 @@ from hedgefund.api.routes.watchlist import router as watchlist_router
 from hedgefund.api.routes.advice import router as advice_router
 from hedgefund.api.routes.news import router as news_router
 from hedgefund.api.routes.leaderboard import router as leaderboard_router
+from hedgefund.api.routes.waitlist import router as waitlist_router
 
 
 def create_app() -> FastAPI:
@@ -36,6 +37,7 @@ def create_app() -> FastAPI:
     app.include_router(advice_router)
     app.include_router(news_router)
     app.include_router(leaderboard_router)
+    app.include_router(waitlist_router)
 
     @app.get("/health", tags=["meta"])
     def health() -> dict[str, str]:
