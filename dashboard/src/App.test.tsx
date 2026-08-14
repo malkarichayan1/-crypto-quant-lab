@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
@@ -113,10 +113,15 @@ describe('App routing', () => {
   })
 
   describe('legacy redirects into /app', () => {
+    // Scoped to the Sidebar nav landmark: some destination pages (e.g.
+    // AgentResultPage) also render a Breadcrumbs trail whose link can share
+    // the same accessible name (e.g. "Research"), so an unscoped query would
+    // match more than one link.
     it.each(Object.entries(STATIC_REDIRECTS))('redirects %s to %s', async (from, to) => {
       renderAt(from)
+      const nav = screen.getByRole('navigation', { name: /main navigation/i })
       expect(
-        await screen.findByRole('link', { name: navLabelFor(to) }),
+        await within(nav).findByRole('link', { name: navLabelFor(to) }),
       ).toHaveAttribute('aria-current', 'page')
     })
 
@@ -125,8 +130,9 @@ describe('App routing', () => {
       async ({ from, to }) => {
         const concretePath = from.replace(/:\w+/, 'test-id')
         renderAt(concretePath)
+        const nav = screen.getByRole('navigation', { name: /main navigation/i })
         expect(
-          await screen.findByRole('link', { name: navLabelFor(to) }),
+          await within(nav).findByRole('link', { name: navLabelFor(to) }),
         ).toHaveAttribute('aria-current', 'page')
       },
     )
