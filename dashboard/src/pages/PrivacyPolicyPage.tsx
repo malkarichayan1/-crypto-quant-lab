@@ -66,7 +66,11 @@ export function PrivacyPolicyPage() {
         <p className="mt-3 text-muted-foreground">
           Analytics only loads after you accept the banner — declining, or not answering, means
           it never loads. Clearing your browser's storage for this site resets that choice and
-          brings the banner back.
+          brings the banner back, so analytics won't load again until you accept — but it does
+          not remove any cookies GA has already set in your browser. Cookies are a separate
+          storage mechanism from the preferences above; to remove those too, clear cookies
+          specifically in your browser's settings, or they'll expire on their own under
+          Google's retention policy.
         </p>
       </section>
 

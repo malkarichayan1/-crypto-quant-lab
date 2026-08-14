@@ -40,4 +40,9 @@ describe('PrivacyPolicyPage', () => {
     expect(link).toHaveAttribute('href', 'https://policies.google.com/privacy')
     expect(screen.getByText(/cross-session identifier/i)).toBeInTheDocument()
   })
+
+  it('clarifies that clearing local storage does not remove GA cookies already set', () => {
+    renderPage()
+    expect(screen.getByText(/does not remove any cookies ga has already set/i)).toBeInTheDocument()
+  })
 })
