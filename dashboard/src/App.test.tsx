@@ -101,6 +101,11 @@ describe('App routing', () => {
     )
   })
 
+  it('renders the Privacy Policy page at /privacy', () => {
+    renderAt('/privacy')
+    expect(screen.getByRole('heading', { level: 1, name: /privacy policy/i })).toBeInTheDocument()
+  })
+
   it('renders the 404 page for an unknown path with a noindex meta tag', () => {
     renderAt('/this-page-does-not-exist')
     expect(screen.getByRole('heading', { name: /page not found/i })).toBeInTheDocument()

@@ -5,6 +5,7 @@ import { CookieConsentBanner } from './components/CookieConsentBanner'
 import { useGoogleAnalytics } from './hooks/useGoogleAnalytics'
 import { LandingPage } from './pages/LandingPage'
 import { ThankYouPage } from './pages/ThankYouPage'
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { MarketsPage } from './pages/MarketsPage'
@@ -33,6 +34,7 @@ export default function App() {
         {/* Public marketing surface — no AppShell */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/thank-you" element={<ThankYouPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
 
         <Route element={<AppShell />}>
           {/* Beginner surfaces */}
