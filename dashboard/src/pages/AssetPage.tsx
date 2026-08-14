@@ -11,6 +11,7 @@ import { getAssetCandles, getMarketAssets } from '../api/market'
 import { getPortfolio } from '../api/portfolio'
 import { useWatchlist } from '../hooks/useWatchlist'
 import { AdvisorCard } from '../components/AdvisorCard'
+import { Breadcrumbs } from '../components/Breadcrumbs'
 import { CoinIcon } from '../components/CoinIcon'
 import { OrderTicket } from '../components/OrderTicket'
 import { PriceChart } from '../components/PriceChart'
@@ -84,6 +85,13 @@ export function AssetPage() {
 
   return (
     <div>
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', to: '/app' },
+          { label: 'Markets', to: '/app/markets' },
+          { label: symbol },
+        ]}
+      />
       {(assetsQuery.data?.stale || candlesQuery.data?.stale) && <StalePricesBanner />}
 
       <div className="mb-6 flex items-start justify-between gap-4">

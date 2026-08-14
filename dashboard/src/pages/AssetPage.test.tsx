@@ -200,4 +200,17 @@ describe('AssetPage', () => {
 
     expect(await screen.findByText(/Advisor's take on BTC/)).toBeInTheDocument()
   })
+
+  it('renders a breadcrumb trail to the coin', async () => {
+    renderAt('/coins/BTC')
+    expect(await screen.findByRole('navigation', { name: /breadcrumb/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Markets' })).toHaveAttribute(
+      'href',
+      '/app/markets',
+    )
+    expect(screen.getByText('BTC', { selector: 'span' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+  })
 })
