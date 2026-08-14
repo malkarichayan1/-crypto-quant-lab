@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useParams, Link } from 'react-router-dom'
 import { getBacktest } from '../api/backtests'
+import { Breadcrumbs } from '../components/Breadcrumbs'
 import { EquityChart } from '../components/EquityChart'
 import { MetricsPanel } from '../components/MetricsPanel'
 import { TradeLogTable } from '../components/TradeLogTable'
@@ -19,6 +20,14 @@ export function ResultPage() {
 
   return (
     <div>
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', to: '/app' },
+          { label: 'Strategy Lab' },
+          { label: 'Backtests', to: '/app/lab/backtests/history' },
+          { label: data.name },
+        ]}
+      />
       <h2>{data.name}</h2>
       <div className="result-layout">
         <div className="chart-col">
