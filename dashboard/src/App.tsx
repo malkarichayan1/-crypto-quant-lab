@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AppShell } from './layout/AppShell'
 import { RedirectWithParams } from './components/RedirectWithParams'
+import { CookieConsentBanner } from './components/CookieConsentBanner'
+import { useGoogleAnalytics } from './hooks/useGoogleAnalytics'
 import { LandingPage } from './pages/LandingPage'
 import { ThankYouPage } from './pages/ThankYouPage'
 import { NotFoundPage } from './pages/NotFoundPage'
@@ -24,51 +26,55 @@ import { PARAM_REDIRECTS, STATIC_REDIRECTS } from './routes/legacyRedirects'
 
 export default function App() {
   const location = useLocation()
+  useGoogleAnalytics()
   return (
-    <Routes>
-      {/* Public marketing surface — no AppShell */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/thank-you" element={<ThankYouPage />} />
+    <>
+      <Routes>
+        {/* Public marketing surface — no AppShell */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/thank-you" element={<ThankYouPage />} />
 
-      <Route element={<AppShell />}>
-        {/* Beginner surfaces */}
-        <Route path="/app" element={<DashboardPage />} />
-        <Route path="/app/markets" element={<MarketsPage />} />
-        <Route path="/app/coins/:symbol" element={<AssetPage />} />
-        <Route path="/app/portfolio" element={<PortfolioPage />} />
-        <Route path="/app/leaderboard" element={<LeaderboardPage />} />
-        <Route path="/app/news" element={<NewsPage />} />
-        <Route path="/app/settings" element={<SettingsPage />} />
+        <Route element={<AppShell />}>
+          {/* Beginner surfaces */}
+          <Route path="/app" element={<DashboardPage />} />
+          <Route path="/app/markets" element={<MarketsPage />} />
+          <Route path="/app/coins/:symbol" element={<AssetPage />} />
+          <Route path="/app/portfolio" element={<PortfolioPage />} />
+          <Route path="/app/leaderboard" element={<LeaderboardPage />} />
+          <Route path="/app/news" element={<NewsPage />} />
+          <Route path="/app/settings" element={<SettingsPage />} />
 
-        {/* Strategy Lab — existing pages */}
-        <Route path="/app/lab/backtests" element={<NewRunPage />} />
-        <Route path="/app/lab/backtests/history" element={<HistoryPage />} />
-        <Route path="/app/lab/backtests/:id" element={<ResultPage />} />
-        <Route path="/app/lab/research" element={<AgentRunPage />} />
-        <Route path="/app/lab/research/history" element={<AgentHistoryPage />} />
-        <Route path="/app/lab/research/runs/:id" element={<AgentResultPage />} />
-        <Route path="/app/lab/paper" element={<PaperStartPage />} />
-        <Route path="/app/lab/paper/history" element={<PaperHistoryPage />} />
-        <Route path="/app/lab/paper/sessions/:id" element={<PaperLivePage />} />
-      </Route>
+          {/* Strategy Lab — existing pages */}
+          <Route path="/app/lab/backtests" element={<NewRunPage />} />
+          <Route path="/app/lab/backtests/history" element={<HistoryPage />} />
+          <Route path="/app/lab/backtests/:id" element={<ResultPage />} />
+          <Route path="/app/lab/research" element={<AgentRunPage />} />
+          <Route path="/app/lab/research/history" element={<AgentHistoryPage />} />
+          <Route path="/app/lab/research/runs/:id" element={<AgentResultPage />} />
+          <Route path="/app/lab/paper" element={<PaperStartPage />} />
+          <Route path="/app/lab/paper/history" element={<PaperHistoryPage />} />
+          <Route path="/app/lab/paper/sessions/:id" element={<PaperLivePage />} />
+        </Route>
 
-      {/* Legacy redirects — every bookmark that worked before this /app
-          split (or before the older Strategy Lab rename) keeps working. */}
-      {Object.entries(STATIC_REDIRECTS).map(([from, to]) => (
-        <Route key={from} path={from} element={<Navigate to={to} replace />} />
-      ))}
-      {PARAM_REDIRECTS.map(({ from, to }) => (
-        <Route key={from} path={from} element={<RedirectWithParams to={to} />} />
-      ))}
-      <Route
-        path="/paper"
-        element={
-          <Navigate to={{ pathname: '/app/lab/paper', search: location.search }} replace />
-        }
-      />
+        {/* Legacy redirects — every bookmark that worked before this /app
+            split (or before the older Strategy Lab rename) keeps working. */}
+        {Object.entries(STATIC_REDIRECTS).map(([from, to]) => (
+          <Route key={from} path={from} element={<Navigate to={to} replace />} />
+        ))}
+        {PARAM_REDIRECTS.map(({ from, to }) => (
+          <Route key={from} path={from} element={<RedirectWithParams to={to} />} />
+        ))}
+        <Route
+          path="/paper"
+          element={
+            <Navigate to={{ pathname: '/app/lab/paper', search: location.search }} replace />
+          }
+        />
 
-      {/* Unmatched path */}
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+        {/* Unmatched path */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+      <CookieConsentBanner />
+    </>
   )
 }
