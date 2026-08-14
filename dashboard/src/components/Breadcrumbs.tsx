@@ -13,7 +13,7 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
       {items.map((item, index) => {
         const isLast = index === items.length - 1
         return (
-          <Fragment key={item.label}>
+          <Fragment key={`${index}-${item.label}`}>
             {index > 0 && <ChevronRight aria-hidden="true" className="size-3.5 shrink-0" />}
             {item.to && !isLast ? (
               <Link to={item.to} className="hover:text-foreground">
