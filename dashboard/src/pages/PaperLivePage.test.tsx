@@ -43,11 +43,20 @@ describe('PaperLivePage', () => {
 
   it('renders session label once loaded', async () => {
     wrap()
-    expect(await screen.findByText('Test Session')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Test Session' })).toBeInTheDocument()
   })
 
   it('renders equity value', async () => {
     wrap()
     expect(await screen.findByText(/10[,.]?100/)).toBeInTheDocument()
+  })
+
+  it('renders a breadcrumb trail to the paper session', async () => {
+    wrap()
+    expect(await screen.findByRole('navigation', { name: /breadcrumb/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Paper Sessions' })).toHaveAttribute(
+      'href',
+      '/app/lab/paper/history',
+    )
   })
 })

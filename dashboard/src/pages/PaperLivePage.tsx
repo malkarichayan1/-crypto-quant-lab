@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getPaperSession, stopPaperSession, usePaperSessionEvents } from '../api/paperSessions'
+import { Breadcrumbs } from '../components/Breadcrumbs'
 import { HoldingsTable } from '../components/HoldingsTable'
 import { LiveTradeFeed } from '../components/LiveTradeFeed'
 
@@ -28,6 +29,14 @@ export function PaperLivePage() {
 
   return (
     <div>
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', to: '/app' },
+          { label: 'Strategy Lab' },
+          { label: 'Paper Sessions', to: '/app/lab/paper/history' },
+          { label: data.label },
+        ]}
+      />
       <div className="paper-live-header">
         <h2>{data.label}</h2>
         <div className="paper-session-meta">
