@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LandingPage } from './LandingPage'
 
 function renderPage() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <MemoryRouter>
-      <LandingPage />
-    </MemoryRouter>,
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 
@@ -44,5 +48,10 @@ describe('LandingPage', () => {
   it('renders the sticky mobile CTA', () => {
     renderPage()
     expect(screen.getByTestId('sticky-mobile-cta')).toBeInTheDocument()
+  })
+
+  it('renders the waitlist form', () => {
+    renderPage()
+    expect(screen.getByRole('button', { name: /notify me/i })).toBeInTheDocument()
   })
 })

@@ -4,6 +4,7 @@ import { usePageMeta } from '../hooks/usePageMeta'
 import { FaqSection } from '../components/landing/FaqSection'
 import { SiteFooter } from '../components/landing/SiteFooter'
 import { StickyMobileCta } from '../components/landing/StickyMobileCta'
+import { WaitlistForm } from '../components/landing/WaitlistForm'
 
 export function LandingPage() {
   usePageMeta(
@@ -27,6 +28,7 @@ export function LandingPage() {
         </Button>
       </main>
       <FaqSection />
+      <WaitlistForm />
       <SiteFooter />
       <StickyMobileCta />
     </div>
