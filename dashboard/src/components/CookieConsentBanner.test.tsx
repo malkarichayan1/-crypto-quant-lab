@@ -5,9 +5,9 @@ import { MemoryRouter } from 'react-router-dom'
 import { CookieConsentBanner } from './CookieConsentBanner'
 import { setCookieConsent } from '../hooks/useCookieConsent'
 
-function renderBanner() {
+function renderBanner(initialPath = '/') {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[initialPath]}>
       <CookieConsentBanner />
     </MemoryRouter>,
   )
@@ -46,5 +46,17 @@ describe('CookieConsentBanner', () => {
     setCookieConsent('declined')
     renderBanner()
     expect(screen.queryByRole('region', { name: /cookie consent/i })).not.toBeInTheDocument()
+  })
+
+  it('offsets above StickyMobileCta on the landing page', () => {
+    renderBanner('/')
+    expect(screen.getByRole('region', { name: /cookie consent/i })).toHaveClass('bottom-[65px]')
+  })
+
+  it('sits flush with the viewport bottom on other routes', () => {
+    renderBanner('/app')
+    const region = screen.getByRole('region', { name: /cookie consent/i })
+    expect(region).toHaveClass('bottom-0')
+    expect(region).not.toHaveClass('bottom-[65px]')
   })
 })
