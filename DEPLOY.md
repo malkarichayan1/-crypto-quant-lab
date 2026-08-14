@@ -31,11 +31,12 @@ Backend on Render, Postgres on Neon, frontend on Vercel, deployed from `main`. W
 1. Create a Vercel account, import this GitHub repo as a new project.
 2. Set the project's root directory to `dashboard`. Build command (`npm run build`) and output directory (`dist`) are Vite defaults — no override needed.
 3. Add an environment variable `VITE_API_URL` = the Render URL from step 2.4 (no trailing slash).
-4. Deploy. Note the resulting Vercel URL.
+4. Optionally add `VITE_GA_MEASUREMENT_ID` = your GA4 measurement ID (e.g. `G-XXXXXXXXXX`). Analytics won't load without it — `useGoogleAnalytics` no-ops when this var is unset — so set it before/at launch if you want traffic tracked.
+5. Deploy. Note the resulting Vercel URL.
 
 ### 4. Close the loop
 
-Go back to Render, set the `CORS_ORIGINS` env var to the Vercel URL from step 3.4 (comma-separate multiple origins if you have more than one, e.g. a preview URL too). Render redeploys automatically on env var change — no code push needed.
+Go back to Render, set the `CORS_ORIGINS` env var to the Vercel URL from step 3.5 (comma-separate multiple origins if you have more than one, e.g. a preview URL too). Render redeploys automatically on env var change — no code push needed.
 
 ### 5. Verify
 
