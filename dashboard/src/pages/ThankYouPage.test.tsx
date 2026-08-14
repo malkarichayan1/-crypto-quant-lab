@@ -21,4 +21,9 @@ describe('ThankYouPage', () => {
     )
     expect(document.title).toBe('Thanks! — HedgeFund Simulator')
   })
+
+  it('sets a noindex robots meta tag', () => {
+    renderPage()
+    expect(document.querySelector('meta[name="robots"]')).toHaveAttribute('content', 'noindex')
+  })
 })
