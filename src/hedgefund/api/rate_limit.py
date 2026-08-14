@@ -20,14 +20,19 @@ def _client_ip(request: Request) -> str:
 
     Render terminates the visitor's TLS connection at its edge and forwards
     the request internally, so request.client.host is Render's proxy on
-    every request — not the visitor. Render sets X-Forwarded-For with the
-    original client as the leftmost entry (appending its own hop after),
-    so we read that when present. Falls back to request.client.host for
-    local dev and tests, where no such header exists.
+    every request — not the visitor. Render *appends* its own observed hop
+    to X-Forwarded-For rather than resetting the header, and never
+    validates or strips whatever the client sent beforehand — so everything
+    except the rightmost entry is attacker-suppliable. We trust only the
+    rightmost entry: the one hop our own infrastructure actually observed.
+    (This mirrors what uvicorn's ProxyHeadersMiddleware does: peel off
+    exactly as many hops from the right as there are trusted proxies in
+    front of you — one, here.) Falls back to request.client.host for local
+    dev and tests, where no such header exists.
     """
     forwarded_for = request.headers.get("x-forwarded-for")
     if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
+        return forwarded_for.split(",")[-1].strip()
     return request.client.host if request.client else "unknown"
 
 
