@@ -10,7 +10,11 @@ export function CookieConsentBanner() {
     <div
       role="region"
       aria-label="Cookie consent"
-      className="fixed inset-x-0 bottom-0 z-50 flex flex-col items-center gap-3 border-t border-border bg-background/95 p-4 backdrop-blur sm:flex-row sm:justify-between"
+      // bottom-[65px] stacks the banner above LandingPage's StickyMobileCta
+      // (border-t 1px + p-3 24px + h-10 button 40px = 65px) instead of
+      // overlapping it — both are `fixed inset-x-0 bottom-0` on mobile.
+      // sm:bottom-0 resets once StickyMobileCta hides itself (`sm:hidden`).
+      className="fixed inset-x-0 bottom-[65px] z-50 flex flex-col items-center gap-3 border-t border-border bg-background/95 p-4 backdrop-blur sm:bottom-0 sm:flex-row sm:justify-between"
     >
       <p className="text-sm text-muted-foreground">
         We use analytics cookies to understand how the app is used. See our{' '}
