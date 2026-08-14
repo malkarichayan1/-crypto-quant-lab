@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getAgentRun, useAgentRunEvents } from '../api/agentRuns'
+import { Breadcrumbs } from '../components/Breadcrumbs'
 import { IterationCard } from '../components/IterationCard'
 import type { SSEEvent } from '../types'
 
@@ -26,6 +27,14 @@ export function AgentResultPage() {
 
   return (
     <div>
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', to: '/app' },
+          { label: 'Strategy Lab' },
+          { label: 'Research', to: '/app/lab/research/history' },
+          { label: run?.goal ?? 'Research Run' },
+        ]}
+      />
       <div className="agent-run-header">
         <h2>{run?.goal ?? 'Research Run'}</h2>
         <div className="agent-run-budget">

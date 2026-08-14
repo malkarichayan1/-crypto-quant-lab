@@ -41,6 +41,15 @@ function wrap(ui: React.ReactElement) {
 describe('AgentResultPage', () => {
   it('renders run goal from query', async () => {
     wrap(<AgentResultPage />)
-    expect(await screen.findByText('maximize sharpe')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'maximize sharpe' })).toBeInTheDocument()
+  })
+
+  it('renders a breadcrumb trail to the research run', async () => {
+    wrap(<AgentResultPage />)
+    expect(await screen.findByRole('navigation', { name: /breadcrumb/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Research' })).toHaveAttribute(
+      'href',
+      '/app/lab/research/history',
+    )
   })
 })
