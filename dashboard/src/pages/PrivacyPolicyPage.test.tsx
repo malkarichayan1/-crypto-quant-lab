@@ -33,4 +33,11 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/google analytics/i)).toBeInTheDocument()
     expect(screen.getByText(/get notified about new features/i)).toBeInTheDocument()
   })
+
+  it('names Google as the analytics recipient and links to its privacy policy', () => {
+    renderPage()
+    const link = screen.getByRole('link', { name: /google analytics/i })
+    expect(link).toHaveAttribute('href', 'https://policies.google.com/privacy')
+    expect(screen.getByText(/cross-session identifier/i)).toBeInTheDocument()
+  })
 })

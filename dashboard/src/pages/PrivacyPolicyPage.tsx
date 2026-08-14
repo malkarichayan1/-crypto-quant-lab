@@ -47,10 +47,26 @@ export function PrivacyPolicyPage() {
       <section>
         <h2 className="mb-2 text-xl font-semibold">Analytics cookies</h2>
         <p className="text-muted-foreground">
-          If you accept the cookie banner, we load Google Analytics to understand which pages
-          are visited and how often. It only loads after you accept — declining, or not
-          answering, means it never loads. You can change your mind at any time by clearing
-          your browser's storage for this site, which brings the banner back.
+          If you accept the cookie banner, we load{' '}
+          <a
+            href="https://policies.google.com/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2 hover:text-foreground"
+          >
+            Google Analytics
+          </a>
+          , a third-party analytics service, to understand which pages are visited and how
+          often. Beyond simple page counts, GA4 also collects an approximate location derived
+          from your IP address, coarse device and browser details, and a cross-session
+          identifier it stores in its own cookies so it can recognize repeat visits. The link
+          above goes to Google's own privacy policy, which covers how Google collects, uses,
+          and retains that data.
+        </p>
+        <p className="mt-3 text-muted-foreground">
+          Analytics only loads after you accept the banner — declining, or not answering, means
+          it never loads. Clearing your browser's storage for this site resets that choice and
+          brings the banner back.
         </p>
       </section>
 
