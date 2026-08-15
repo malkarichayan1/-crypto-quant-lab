@@ -30,7 +30,7 @@ describe('apiFetch', () => {
 
   it('sends the device id as a header on every request', async () => {
     localStorage.clear()
-    const fetchMock = vi.fn(async () =>
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       new Response(JSON.stringify({ ok: true }), { status: 200 }),
     )
     vi.stubGlobal('fetch', fetchMock)
