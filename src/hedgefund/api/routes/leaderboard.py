@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from hedgefund.api.db.engine import get_session
 from hedgefund.api.db.manual_repository import ManualRepository
 from hedgefund.api.db.paper_repository import PaperRepository
-from hedgefund.api.deps import get_market_data
+from hedgefund.api.deps import get_device_id, get_market_data
 from hedgefund.api.manual_schemas import LeaderboardResponse, LeaderboardRowOut
 from hedgefund.manual import leaderboard as lb
 from hedgefund.manual.market_data import PricesUnavailableError, UnknownSymbolError
@@ -50,9 +50,11 @@ def _benchmark_row(market, view) -> lb.LeaderboardRow | None:
 
 @router.get("", response_model=LeaderboardResponse)
 def get_leaderboard(
-    session: Session = Depends(get_session), market=Depends(get_market_data)
+    session: Session = Depends(get_session),
+    market=Depends(get_market_data),
+    device_id: str = Depends(get_device_id),
 ) -> LeaderboardResponse:
-    manual = ManualRepository(session)
+    manual = ManualRepository(session, device_id)
     paper = PaperRepository(session)
 
     try:

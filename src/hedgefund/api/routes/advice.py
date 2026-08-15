@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from hedgefund.api.config import get_settings
 from hedgefund.api.db.engine import get_session
 from hedgefund.api.db.manual_repository import ManualRepository
-from hedgefund.api.deps import get_call_llm, get_market_data
+from hedgefund.api.deps import get_call_llm, get_device_id, get_market_data
 from hedgefund.api.manual_schemas import AdvicePayloadOut, AdviceResponse
 from hedgefund.manual import advice as adv
 from hedgefund.manual.market_data import PricesUnavailableError, UnknownSymbolError
@@ -38,6 +38,7 @@ def read_advice(
     symbol: str | None = Query(None),
     session: Session = Depends(get_session),
     market=Depends(get_market_data),
+    device_id: str = Depends(get_device_id),
 ) -> AdviceResponse:
     """Cached advice only — deliberately never calls the LLM, so simply opening
     the Dashboard costs nothing."""
@@ -45,7 +46,7 @@ def read_advice(
         return _disabled()
 
     scope = _scope_for(symbol, market)
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, device_id)
     portfolio = repo.get_or_create_active_portfolio(DEFAULT_STARTING_CASH)
     session.commit()
 
@@ -63,6 +64,7 @@ def create_advice(
     session: Session = Depends(get_session),
     market=Depends(get_market_data),
     call_llm=Depends(get_call_llm),
+    device_id: str = Depends(get_device_id),
 ) -> AdviceResponse:
     """Generate advice on demand. Reuses a fresh cache entry if one exists."""
     if not get_settings().advisor_enabled:
@@ -71,7 +73,7 @@ def create_advice(
         return _disabled()
 
     scope = _scope_for(symbol, market)
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, device_id)
     try:
         view = get_portfolio_view(repo, market)
         payload = adv.generate_advice(repo, market, call_llm, view=view, scope=scope)

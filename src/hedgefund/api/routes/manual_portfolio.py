@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from hedgefund.api.db.engine import get_session
 from hedgefund.api.db.manual_repository import ManualRepository
-from hedgefund.api.deps import get_market_data
+from hedgefund.api.deps import get_device_id, get_market_data
 from hedgefund.api.manual_schemas import (
     EquityPointOut,
     EquitySeriesResponse,
@@ -32,9 +32,11 @@ _UNAVAILABLE_MSG = "Prices are temporarily unavailable — please try again shor
 
 @router.get("", response_model=PortfolioResponse)
 def get_portfolio(
-    session: Session = Depends(get_session), market=Depends(get_market_data)
+    session: Session = Depends(get_session),
+    market=Depends(get_market_data),
+    device_id: str = Depends(get_device_id),
 ) -> PortfolioResponse:
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, device_id)
     try:
         view = get_portfolio_view(repo, market)
     except PricesUnavailableError:
@@ -44,8 +46,10 @@ def get_portfolio(
 
 
 @router.get("/orders", response_model=list[ManualOrderOut])
-def list_orders(session: Session = Depends(get_session)) -> list[ManualOrderOut]:
-    repo = ManualRepository(session)
+def list_orders(
+    session: Session = Depends(get_session), device_id: str = Depends(get_device_id)
+) -> list[ManualOrderOut]:
+    repo = ManualRepository(session, device_id)
     portfolio = repo.get_or_create_active_portfolio(DEFAULT_STARTING_CASH)
     session.commit()
     rows = repo.list_orders(portfolio.id)
@@ -57,8 +61,9 @@ def create_order(
     body: PlaceOrderRequest,
     session: Session = Depends(get_session),
     market=Depends(get_market_data),
+    device_id: str = Depends(get_device_id),
 ) -> ManualOrderOut:
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, device_id)
     try:
         row = place_order(
             repo, market,
@@ -80,12 +85,13 @@ def equity_series(
     range: str = Query("1M"),
     session: Session = Depends(get_session),
     market=Depends(get_market_data),
+    device_id: str = Depends(get_device_id),
 ) -> EquitySeriesResponse:
     if range not in EQUITY_RANGE_DAYS:
         raise HTTPException(
             status_code=422, detail=f"range must be one of {sorted(EQUITY_RANGE_DAYS)}"
         )
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, device_id)
     try:
         points = get_equity_series(repo, market, range)
     except PricesUnavailableError:
@@ -100,9 +106,11 @@ def equity_series(
 @router.post("/reset", response_model=PortfolioCreatedResponse,
              status_code=status.HTTP_201_CREATED)
 def reset_portfolio(
-    body: ResetPortfolioRequest, session: Session = Depends(get_session)
+    body: ResetPortfolioRequest,
+    session: Session = Depends(get_session),
+    device_id: str = Depends(get_device_id),
 ) -> PortfolioCreatedResponse:
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, device_id)
     row = repo.create_portfolio(starting_cash=body.starting_cash)
     session.commit()
     session.refresh(row)

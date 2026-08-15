@@ -4,6 +4,8 @@ from collections.abc import Callable
 from datetime import date
 from functools import lru_cache
 
+from fastapi import Header, HTTPException
+
 from hedgefund.agents.llm import CallLLM, call_llm as _call_llm
 from hedgefund.data.panel import PricePanel, load_panel
 from hedgefund.data.universe import KRAKEN_LIVE_UNIVERSE
@@ -31,6 +33,20 @@ def get_call_llm() -> CallLLM:
     Override in tests via app.dependency_overrides[get_call_llm].
     """
     return _call_llm
+
+
+def get_device_id(x_device_id: str | None = Header(default=None, alias="X-Device-Id")) -> str:
+    """Required per-request device identity for the manual-trading surfaces
+    (watchlist/portfolio/advice). The frontend generates and persists a
+    random UUID in localStorage (dashboard/src/lib/deviceId.ts) and sends it
+    on every request — this keeps each visitor's simulated portfolio
+    private without requiring login. Not a security credential: anyone who
+    guesses another device's ID could act as that device. That's an
+    accepted tradeoff for a login-free play-money simulator, not a defect.
+    """
+    if not x_device_id:
+        raise HTTPException(status_code=400, detail="X-Device-Id header is required.")
+    return x_device_id
 
 
 @lru_cache

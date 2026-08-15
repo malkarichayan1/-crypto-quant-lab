@@ -99,7 +99,7 @@ def test_placing_an_order_clears_cached_advice(client, session):
 
     from hedgefund.api.db.manual_repository import ManualRepository
 
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, "test-device")
     portfolio = repo.get_or_create_active_portfolio(100_000.0)
     repo.add_advice(portfolio.id, scope="portfolio", payload={"suggestions": []})
     session.commit()
@@ -111,3 +111,12 @@ def test_placing_an_order_clears_cached_advice(client, session):
     assert response.status_code == 201
     cutoff = datetime(2000, 1, 1, tzinfo=timezone.utc)
     assert repo.get_fresh_advice(portfolio.id, scope="portfolio", not_before=cutoff) is None
+
+
+def test_portfolio_is_isolated_per_device(client):
+    client.post("/portfolio/orders",
+                json={"symbol": "AAA", "side": "buy", "usd_amount": 1000.0})
+    other = client.get("/portfolio", headers={"X-Device-Id": "other-device"})
+    # A different device bootstraps its own fresh $100k portfolio, unaffected
+    # by "test-device"'s trade.
+    assert other.json()["cash"] == 100_000.0

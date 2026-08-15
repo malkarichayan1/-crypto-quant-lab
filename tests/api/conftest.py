@@ -65,6 +65,6 @@ def client(session, market_data):
     app.dependency_overrides[get_session] = _override_session
     app.dependency_overrides[get_panel_loader] = _override_loader
     app.dependency_overrides[get_market_data] = lambda: market_data
-    with TestClient(app) as c:
+    with TestClient(app, headers={"X-Device-Id": "test-device"}) as c:
         yield c
     app.dependency_overrides.clear()
