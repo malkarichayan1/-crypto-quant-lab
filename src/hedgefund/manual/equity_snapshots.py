@@ -28,14 +28,17 @@ async def equity_snapshot_loop(
     session_factory, market: MarketDataProvider, interval_seconds: int
 ) -> None:
     """Background loop mirroring paper.ticker_loop: sync DB + ccxt work runs in
-    a worker thread; the loop never dies."""
+    a worker thread; the loop never dies. Fans out across every device that
+    has a portfolio — there is no longer a single implicit "active"
+    portfolio for the whole app."""
     from hedgefund.api.db.manual_repository import ManualRepository
 
     while True:
         def _cycle() -> None:
             db = session_factory()
             try:
-                snapshot_once(ManualRepository(db), market)
+                for device_id in ManualRepository.list_active_device_ids(db):
+                    snapshot_once(ManualRepository(db, device_id), market)
                 db.commit()
             finally:
                 db.close()
