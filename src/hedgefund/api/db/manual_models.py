@@ -13,6 +13,7 @@ from hedgefund.api.db.models import Base
 class WatchlistRow(Base):
     __tablename__ = "watchlist"
 
+    device_id: Mapped[str] = mapped_column(String, primary_key=True)
     symbol: Mapped[str] = mapped_column(String, primary_key=True)
     starred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -23,6 +24,7 @@ class PortfolioRow(Base):
     __tablename__ = "portfolios"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    device_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
     starting_cash: Mapped[float] = mapped_column(Float, nullable=False)
     # clock_timestamp() (not now()) so rows created within the same transaction still
     # get strictly increasing values — get_active_portfolio() relies on that ordering.
