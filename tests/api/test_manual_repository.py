@@ -11,7 +11,7 @@ from hedgefund.api.db.manual_repository import ManualRepository
 
 
 def test_watchlist_star_list_unstar(session):
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, "device-a")
     assert repo.list_watchlist() == []
 
     repo.star("BTC")
@@ -28,8 +28,19 @@ def test_watchlist_star_list_unstar(session):
     assert repo.list_watchlist() == ["ETH"]
 
 
+def test_watchlist_is_isolated_per_device(session):
+    repo_a = ManualRepository(session, "device-a")
+    repo_b = ManualRepository(session, "device-b")
+
+    repo_a.star("BTC")
+    repo_b.star("ETH")
+
+    assert repo_a.list_watchlist() == ["BTC"]
+    assert repo_b.list_watchlist() == ["ETH"]
+
+
 def test_portfolio_bootstrap_and_active_selection(session):
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, "device-a")
     assert repo.get_active_portfolio() is None
 
     first = repo.get_or_create_active_portfolio(default_cash=100_000.0)
@@ -38,6 +49,28 @@ def test_portfolio_bootstrap_and_active_selection(session):
 
     second = repo.create_portfolio(starting_cash=50_000.0)
     assert repo.get_active_portfolio().id == second.id  # newest row wins
+
+
+def test_portfolio_is_isolated_per_device(session):
+    repo_a = ManualRepository(session, "device-a")
+    repo_b = ManualRepository(session, "device-b")
+
+    portfolio_a = repo_a.get_or_create_active_portfolio(default_cash=100_000.0)
+    portfolio_b = repo_b.get_or_create_active_portfolio(default_cash=50_000.0)
+
+    assert portfolio_a.id != portfolio_b.id
+    assert repo_a.get_active_portfolio().id == portfolio_a.id
+    assert repo_b.get_active_portfolio().id == portfolio_b.id
+
+
+def test_list_active_device_ids_returns_one_per_device(session):
+    ManualRepository(session, "device-a").get_or_create_active_portfolio(default_cash=100_000.0)
+    ManualRepository(session, "device-b").get_or_create_active_portfolio(default_cash=100_000.0)
+    # device-a resets — should still count once, not twice.
+    ManualRepository(session, "device-a").create_portfolio(starting_cash=50_000.0)
+
+    device_ids = ManualRepository.list_active_device_ids(session)
+    assert sorted(device_ids) == ["device-a", "device-b"]
 
 
 def test_bootstrap_serializes_concurrent_callers_via_advisory_lock(engine):
@@ -59,12 +92,17 @@ def test_bootstrap_serializes_concurrent_callers_via_advisory_lock(engine):
     since pg_advisory_xact_lock blocks for as long as the lock is held,
     however long that is — until A commits and releases it. That blocking
     behavior is exactly the guarantee the fix relies on.
+
+    Both callers use the SAME device_id here: the lock key is now derived
+    per-device (see Task 2 Step 3), so this test would pass trivially for
+    granted for two DIFFERENT devices — it specifically proves same-device
+    concurrent bootstraps still serialize correctly.
     """
     Session = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     session_a = Session()
     session_b = Session()
-    repo_a = ManualRepository(session_a)
-    repo_b = ManualRepository(session_b)
+    repo_a = ManualRepository(session_a, "device-a")
+    repo_b = ManualRepository(session_b, "device-a")
 
     b_done = threading.Event()
     portfolio_b_ids = []
@@ -118,7 +156,7 @@ def test_bootstrap_serializes_concurrent_callers_via_advisory_lock(engine):
 
 
 def test_orders_roundtrip(session):
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, "device-a")
     p = repo.get_or_create_active_portfolio(default_cash=100_000.0)
     repo.add_order(p.id, symbol="BTC", side="buy", usd_amount=1000.0,
                    units=10.0, fill_price=100.0)
@@ -130,7 +168,7 @@ def test_orders_roundtrip(session):
 
 
 def test_equity_points_filtered_by_since(session):
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, "device-a")
     p = repo.get_or_create_active_portfolio(default_cash=100_000.0)
     now = datetime.now(timezone.utc)
     repo.add_equity_point(p.id, now - timedelta(days=10), 99_000.0)
@@ -142,7 +180,7 @@ def test_equity_points_filtered_by_since(session):
 
 
 def test_add_and_get_fresh_advice_round_trips_payload(session):
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, "device-a")
     portfolio = repo.create_portfolio(100_000.0)
     payload = {"suggestions": [{"text": "hi", "why": "because", "action": None}]}
 
@@ -157,7 +195,7 @@ def test_add_and_get_fresh_advice_round_trips_payload(session):
 
 
 def test_get_fresh_advice_ignores_rows_older_than_cutoff(session):
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, "device-a")
     portfolio = repo.create_portfolio(100_000.0)
     repo.add_advice(portfolio.id, scope="portfolio", payload={"suggestions": []})
 
@@ -166,7 +204,7 @@ def test_get_fresh_advice_ignores_rows_older_than_cutoff(session):
 
 
 def test_get_fresh_advice_is_scoped_per_symbol(session):
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, "device-a")
     portfolio = repo.create_portfolio(100_000.0)
     repo.add_advice(portfolio.id, scope="BTC", payload={"suggestions": [], "s": "btc"})
 
@@ -176,7 +214,7 @@ def test_get_fresh_advice_is_scoped_per_symbol(session):
 
 
 def test_get_fresh_advice_returns_newest_row_for_scope(session):
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, "device-a")
     portfolio = repo.create_portfolio(100_000.0)
     repo.add_advice(portfolio.id, scope="portfolio", payload={"n": 1})
     repo.add_advice(portfolio.id, scope="portfolio", payload={"n": 2})
@@ -189,7 +227,7 @@ def test_get_fresh_advice_returns_newest_row_for_scope(session):
 
 
 def test_clear_advice_removes_every_scope_for_the_portfolio(session):
-    repo = ManualRepository(session)
+    repo = ManualRepository(session, "device-a")
     portfolio = repo.create_portfolio(100_000.0)
     repo.add_advice(portfolio.id, scope="portfolio", payload={})
     repo.add_advice(portfolio.id, scope="BTC", payload={})

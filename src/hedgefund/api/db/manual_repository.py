@@ -15,31 +15,40 @@ from hedgefund.api.db.manual_models import (
     WatchlistRow,
 )
 
-# Fixed key for the Postgres transaction-scoped advisory lock that serializes
-# concurrent "bootstrap the first portfolio" attempts (see
-# get_or_create_active_portfolio below). Any stable int64 works; derived via
-# crc32 of a namespacing string purely so it doesn't collide by coincidence
-# with an advisory lock key used elsewhere.
-_PORTFOLIO_BOOTSTRAP_LOCK_KEY = zlib.crc32(b"hedgefund.manual.portfolio_bootstrap")
+# Namespace for the Postgres transaction-scoped advisory lock that serializes
+# concurrent "bootstrap the first portfolio" attempts for the SAME device
+# (see get_or_create_active_portfolio below). Scoped per-device (crc32 of
+# this namespace + device_id) so two DIFFERENT devices bootstrapping at the
+# same moment never serialize against each other — only concurrent requests
+# from the same device do, which is the actual scenario this guards against
+# (e.g. a browser firing GET /portfolio and GET /portfolio/orders in
+# parallel on first load).
+_PORTFOLIO_BOOTSTRAP_LOCK_NAMESPACE = "hedgefund.manual.portfolio_bootstrap"
 
 
 class ManualRepository:
-    """Data access for the beginner (manual-trading) surfaces. Caller commits."""
+    """Data access for the beginner (manual-trading) surfaces, scoped to one
+    device_id. Caller commits."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, device_id: str) -> None:
         self._s = session
+        self._device_id = device_id
 
     def list_watchlist(self) -> list[str]:
-        stmt = select(WatchlistRow).order_by(WatchlistRow.starred_at, WatchlistRow.symbol)
+        stmt = (
+            select(WatchlistRow)
+            .where(WatchlistRow.device_id == self._device_id)
+            .order_by(WatchlistRow.starred_at, WatchlistRow.symbol)
+        )
         return [row.symbol for row in self._s.scalars(stmt)]
 
     def star(self, symbol: str) -> None:
-        if self._s.get(WatchlistRow, symbol) is None:
-            self._s.add(WatchlistRow(symbol=symbol))
+        if self._s.get(WatchlistRow, (self._device_id, symbol)) is None:
+            self._s.add(WatchlistRow(device_id=self._device_id, symbol=symbol))
             self._s.flush()
 
     def unstar(self, symbol: str) -> None:
-        row = self._s.get(WatchlistRow, symbol)
+        row = self._s.get(WatchlistRow, (self._device_id, symbol))
         if row is not None:
             self._s.delete(row)
             self._s.flush()
@@ -47,29 +56,31 @@ class ManualRepository:
     # ---- portfolios (Phase 3) ----
 
     def get_active_portfolio(self) -> PortfolioRow | None:
-        stmt = select(PortfolioRow).order_by(PortfolioRow.created_at.desc()).limit(1)
+        stmt = (
+            select(PortfolioRow)
+            .where(PortfolioRow.device_id == self._device_id)
+            .order_by(PortfolioRow.created_at.desc())
+            .limit(1)
+        )
         return self._s.scalars(stmt).first()
 
     def create_portfolio(self, starting_cash: float) -> PortfolioRow:
-        row = PortfolioRow(id=uuid.uuid4(), starting_cash=starting_cash)
+        row = PortfolioRow(id=uuid.uuid4(), device_id=self._device_id, starting_cash=starting_cash)
         self._s.add(row)
         self._s.flush()
         return row
 
     def get_or_create_active_portfolio(self, default_cash: float) -> PortfolioRow:
         # Double-checked locking: the overwhelming majority of calls, forever
-        # after the very first request against a fresh database, find an
+        # after the very first request from a given device, find an
         # existing portfolio here and return immediately without ever
         # touching the lock. We only pay the lock's round-trip (and briefly
-        # hold it) on the rare path where none exists yet.
+        # hold it) on the rare path where none exists yet for this device.
         existing = self.get_active_portfolio()
         if existing is not None:
             return existing
 
-        # Serialize concurrent bootstrap attempts (e.g. a browser firing
-        # GET /portfolio and GET /portfolio/orders in parallel on first
-        # load, against an empty database) so two callers can't each see
-        # "no active portfolio" and both create one, orphaning the loser.
+        # Serialize concurrent bootstrap attempts from this SAME device.
         # Transaction-scoped: acquired here, released automatically on this
         # session's next commit or rollback — no separate unlock needed.
         #
@@ -77,15 +88,26 @@ class ManualRepository:
         # callers like get_portfolio_view() do further work (up to ~20
         # sequential ccxt calls on a cold market-data cache) before their
         # own commit. Locking only around this recheck-then-create keeps
-        # that unrelated work from serializing behind a single global lock
+        # that unrelated work from serializing behind this device's lock
         # once a portfolio already exists.
-        self._s.execute(
-            text("SELECT pg_advisory_xact_lock(:key)"),
-            {"key": _PORTFOLIO_BOOTSTRAP_LOCK_KEY},
+        lock_key = zlib.crc32(
+            f"{_PORTFOLIO_BOOTSTRAP_LOCK_NAMESPACE}.{self._device_id}".encode()
         )
-        # Recheck: another caller may have created one while we were
-        # blocked waiting for the lock.
+        self._s.execute(
+            text("SELECT pg_advisory_xact_lock(:key)"), {"key": lock_key}
+        )
+        # Recheck: another caller for this device may have created one while
+        # we were blocked waiting for the lock.
         return self.get_active_portfolio() or self.create_portfolio(default_cash)
+
+    @staticmethod
+    def list_active_device_ids(session: Session) -> list[str]:
+        """Every distinct device_id with at least one portfolio. Used only by
+        the background equity-snapshot loop (equity_snapshots.py), which
+        must fan out across every device's active portfolio each cycle —
+        deliberately NOT device-scoped, unlike every other method here."""
+        stmt = select(PortfolioRow.device_id).distinct()
+        return list(session.scalars(stmt).all())
 
     def list_orders(self, portfolio_id: uuid.UUID) -> list[ManualOrderRow]:
         stmt = (
