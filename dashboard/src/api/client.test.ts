@@ -27,4 +27,18 @@ describe('apiFetch', () => {
     ))
     await expect(apiFetch('/backtests')).rejects.toThrow('HTTP 500')
   })
+
+  it('sends the device id as a header on every request', async () => {
+    localStorage.clear()
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await apiFetch('/watchlist')
+
+    const [, init] = fetchMock.mock.calls[0]
+    const headers = new Headers(init?.headers)
+    expect(headers.get('X-Device-Id')).toBeTruthy()
+  })
 })

@@ -12,7 +12,10 @@ describe('portfolio api', () => {
     const fetchMock = vi.fn(() => okJson({}))
     vi.stubGlobal('fetch', fetchMock)
     await getPortfolio()
-    expect(fetchMock).toHaveBeenCalledWith('http://localhost:8000/portfolio', undefined)
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:8000/portfolio',
+      expect.objectContaining({ headers: expect.any(Headers) }),
+    )
   })
 
   it('posts an order as JSON', async () => {

@@ -12,7 +12,10 @@ describe('market api', () => {
     const fetchMock = vi.fn(() => okJson({ assets: [], stale: false, as_of: 'x' }))
     vi.stubGlobal('fetch', fetchMock)
     await getMarketAssets()
-    expect(fetchMock).toHaveBeenCalledWith('http://localhost:8000/market/assets', undefined)
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://localhost:8000/market/assets',
+      expect.objectContaining({ headers: expect.any(Headers) }),
+    )
   })
 
   it('fetches candles with symbol and range', async () => {
@@ -21,7 +24,7 @@ describe('market api', () => {
     await getAssetCandles('BTC', '1W')
     expect(fetchMock).toHaveBeenCalledWith(
       'http://localhost:8000/market/assets/BTC/candles?range=1W',
-      undefined,
+      expect.objectContaining({ headers: expect.any(Headers) }),
     )
   })
 })
