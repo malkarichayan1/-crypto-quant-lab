@@ -49,3 +49,7 @@ Open the Vercel URL:
 ## Redeploying later
 
 Both Render and Vercel auto-deploy on every push to the connected branch. No manual steps needed for ordinary code changes — only re-run the steps above if you add a new required env var or change the deploy branch.
+
+## Publishing to Google Play
+
+The dashboard is PWA-installable (manifest + icons + service worker). See [`docs/google-play-twa.md`](docs/google-play-twa.md) for wrapping it as a Trusted Web Activity and submitting it to the Play Store.
