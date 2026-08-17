@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { useBackendWarmup } from '../hooks/useBackendWarmup'
 import { usePageMeta } from '../hooks/usePageMeta'
 import { FaqSection } from '../components/landing/FaqSection'
 import { SiteFooter } from '../components/landing/SiteFooter'
@@ -11,6 +12,10 @@ export function LandingPage() {
     'HedgeFund Simulator — Practice investing risk-free',
     'Trade crypto with $100,000 in virtual cash, real market prices, and free AI advice. No real money, ever.',
   )
+  // This page fetches nothing, so the time a visitor spends reading it is
+  // free cold-start budget. Wake the API now and it's ready by the time they
+  // click through to /app.
+  useBackendWarmup()
 
   return (
     // pb-20 keeps footer content clear of the fixed sticky CTA bar on mobile.

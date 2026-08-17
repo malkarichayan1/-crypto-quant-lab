@@ -7,12 +7,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { getMarketAssets } from '../api/market'
 import { getPortfolio, getPortfolioEquity } from '../api/portfolio'
+import { useSlowLoadNotice } from '../hooks/useSlowLoadNotice'
 import { useWatchlist } from '../hooks/useWatchlist'
 import { AdvisorCard } from '../components/AdvisorCard'
 import { CoinIcon } from '../components/CoinIcon'
 import { MarketCard } from '../components/MarketCard'
 import { PortfolioEquityChart } from '../components/PortfolioEquityChart'
 import { StalePricesBanner } from '../components/StalePricesBanner'
+import { WakingUpBanner } from '../components/WakingUpBanner'
 import { StatCard } from '../components/StatCard'
 import { formatPct, formatUsd } from '../lib/format'
 import type { EquityRange } from '../types'
@@ -47,10 +49,16 @@ export function DashboardPage() {
   const assets = marketQuery.data?.assets ?? []
   const watchlistAssets = assets.filter((asset) => starred.has(asset.symbol))
   const portfolioFailed = portfolioQuery.isError && !portfolioQuery.data
+  // A slow first portfolio load on free hosting is almost always the API
+  // cold-starting, not a hung request — say so rather than showing skeletons
+  // indefinitely. Suppressed once the query has actually failed, since the
+  // error state below is the more useful message at that point.
+  const isWakingUp = useSlowLoadNotice(portfolioQuery.isPending) && !portfolioFailed
 
   return (
     <div>
       <h1 className="sr-only">Dashboard</h1>
+      {isWakingUp && <WakingUpBanner />}
       {portfolio?.stale && <StalePricesBanner />}
 
       {portfolioFailed ? (
