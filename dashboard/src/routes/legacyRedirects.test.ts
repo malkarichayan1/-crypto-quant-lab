@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { PARAM_REDIRECTS, STATIC_REDIRECTS } from './legacyRedirects'
 
 describe('legacyRedirects', () => {
-  it('every static redirect target is under /app', () => {
+  it('every static redirect target is /app or under it', () => {
     for (const to of Object.values(STATIC_REDIRECTS)) {
-      expect(to.startsWith('/app/')).toBe(true)
+      expect(to === '/app' || to.startsWith('/app/')).toBe(true)
     }
   })
 
-  it('every param redirect target is under /app', () => {
+  it('every param redirect target is /app or under it', () => {
     for (const { to } of PARAM_REDIRECTS) {
-      expect(to.startsWith('/app/')).toBe(true)
+      expect(to === '/app' || to.startsWith('/app/')).toBe(true)
     }
   })
 

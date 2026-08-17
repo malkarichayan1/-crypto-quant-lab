@@ -23,15 +23,6 @@ describe('APP_PAGE_META', () => {
       '/app/leaderboard',
       '/app/news',
       '/app/settings',
-      '/app/lab/backtests',
-      '/app/lab/backtests/history',
-      '/app/lab/backtests/:id',
-      '/app/lab/research',
-      '/app/lab/research/history',
-      '/app/lab/research/runs/:id',
-      '/app/lab/paper',
-      '/app/lab/paper/history',
-      '/app/lab/paper/sessions/:id',
     ]
     const patterns = APP_PAGE_META.map((e) => e.pattern)
     for (const route of expected) {

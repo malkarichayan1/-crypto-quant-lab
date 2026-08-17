@@ -1,9 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import {
-  Activity,
-  Bot,
   CandlestickChart,
-  FlaskConical,
   LayoutDashboard,
   Newspaper,
   Settings,
@@ -26,12 +23,6 @@ const MAIN_ITEMS: NavItem[] = [
   { to: '/app/portfolio', label: 'Portfolio', icon: Wallet },
   { to: '/app/leaderboard', label: 'Leaderboard', icon: Trophy },
   { to: '/app/news', label: 'News', icon: Newspaper },
-]
-
-const LAB_ITEMS: NavItem[] = [
-  { to: '/app/lab/backtests', label: 'Backtests', icon: FlaskConical },
-  { to: '/app/lab/research', label: 'Research', icon: Bot },
-  { to: '/app/lab/paper', label: 'Paper Sessions', icon: Activity },
 ]
 
 function SidebarLink({ item }: { item: NavItem }) {
@@ -64,15 +55,6 @@ export function Sidebar() {
       {MAIN_ITEMS.map((item) => (
         <SidebarLink key={item.to} item={item} />
       ))}
-
-      <div className="mt-4 border-t border-border pt-4">
-        <p className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground/70">
-          Strategy Lab
-        </p>
-        {LAB_ITEMS.map((item) => (
-          <SidebarLink key={item.to} item={item} />
-        ))}
-      </div>
 
       <div className="mt-auto border-t border-border pt-4">
         <SidebarLink item={{ to: '/app/settings', label: 'Settings', icon: Settings }} />

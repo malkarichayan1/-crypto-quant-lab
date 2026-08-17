@@ -19,16 +19,15 @@ function renderAt(path: string) {
 // Maps an /app destination to the Sidebar link that should be aria-current
 // once a redirect lands there — every STATIC_REDIRECTS/PARAM_REDIRECTS
 // target (except /app/coins/:symbol, tested separately) falls under one of
-// these eight prefixes.
+// these prefixes. '/app' is checked last since it's a prefix of every
+// other entry here.
 const NAV_LABEL_FOR_APP_PREFIX: Array<{ prefix: string; label: RegExp }> = [
-  { prefix: '/app/lab/backtests', label: /backtests/i },
-  { prefix: '/app/lab/research', label: /research/i },
-  { prefix: '/app/lab/paper', label: /paper sessions/i },
   { prefix: '/app/markets', label: /markets/i },
   { prefix: '/app/portfolio', label: /portfolio/i },
   { prefix: '/app/leaderboard', label: /leaderboard/i },
   { prefix: '/app/news', label: /news/i },
   { prefix: '/app/settings', label: /settings/i },
+  { prefix: '/app', label: /dashboard/i },
 ]
 
 function navLabelFor(appPath: string): RegExp {
@@ -39,22 +38,9 @@ function navLabelFor(appPath: string): RegExp {
 
 describe('App routing', () => {
   beforeEach(() => {
-    // Lab pages fetch on mount; a never-resolving fetch keeps them in loading state.
+    // Most /app pages fetch on mount; a never-resolving fetch keeps them in
+    // loading state, which is all these routing tests need to assert on.
     vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
-    // AgentResultPage and PaperLivePage open a live EventSource on mount, which
-    // jsdom doesn't implement. Their own test files mock the whole api module to
-    // avoid this; here we exercise the real component tree via redirects, so a
-    // minimal stub keeps mount from throwing (no error boundary exists in the
-    // app, so an uncaught error here would unmount the Sidebar too and fail the
-    // aria-current assertion below for an unrelated reason).
-    vi.stubGlobal(
-      'EventSource',
-      vi.fn().mockImplementation(() => ({
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        close: vi.fn(),
-      })),
-    )
   })
 
   it('renders the landing page at /', () => {
@@ -140,13 +126,6 @@ describe('App routing', () => {
     it('redirects /coins/:symbol to /app/coins/:symbol', () => {
       renderAt('/coins/BTC')
       expect(screen.getByText('BTC', { selector: 'p' })).toBeInTheDocument()
-    })
-
-    it('preserves the query string when redirecting legacy /paper to /app/lab/paper', async () => {
-      renderAt('/paper?source_backtest_id=abc-123')
-      // PaperStartPage reads source_backtest_id from the URL to prefill the form.
-      // If the redirect dropped the query string, this prefill notice would never appear.
-      expect(await screen.findByText('From backtest abc-123')).toBeInTheDocument()
     })
   })
 })

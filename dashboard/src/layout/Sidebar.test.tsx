@@ -31,21 +31,9 @@ describe('Sidebar', () => {
     )
   })
 
-  it('renders the Strategy Lab section with lab links', () => {
+  it('does not render a Strategy Lab section', () => {
     renderAt('/app')
-    expect(screen.getByText('Strategy Lab')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /backtests/i })).toHaveAttribute(
-      'href',
-      '/app/lab/backtests',
-    )
-    expect(screen.getByRole('link', { name: /research/i })).toHaveAttribute(
-      'href',
-      '/app/lab/research',
-    )
-    expect(screen.getByRole('link', { name: /paper sessions/i })).toHaveAttribute(
-      'href',
-      '/app/lab/paper',
-    )
+    expect(screen.queryByText('Strategy Lab')).not.toBeInTheDocument()
   })
 
   it('marks the current section active via aria-current', () => {
