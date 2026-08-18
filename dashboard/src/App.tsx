@@ -14,6 +14,7 @@ import { PortfolioPage } from './pages/PortfolioPage'
 import { LeaderboardPage } from './pages/LeaderboardPage'
 import { NewsPage } from './pages/NewsPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { LearnPage } from './pages/LearnPage'
 import { PARAM_REDIRECTS, STATIC_REDIRECTS } from './routes/legacyRedirects'
 
 export default function App() {
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/app/portfolio" element={<PortfolioPage />} />
           <Route path="/app/leaderboard" element={<LeaderboardPage />} />
           <Route path="/app/news" element={<NewsPage />} />
+          <Route path="/app/learn" element={<LearnPage />} />
           <Route path="/app/settings" element={<SettingsPage />} />
         </Route>
 

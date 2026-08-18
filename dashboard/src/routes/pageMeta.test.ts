@@ -23,6 +23,7 @@ describe('APP_PAGE_META', () => {
       '/app/leaderboard',
       '/app/news',
       '/app/settings',
+      '/app/learn',
     ]
     const patterns = APP_PAGE_META.map((e) => e.pattern)
     for (const route of expected) {

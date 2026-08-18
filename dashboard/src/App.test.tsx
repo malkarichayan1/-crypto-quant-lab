@@ -73,6 +73,11 @@ describe('App routing', () => {
     expect(screen.getByRole('heading', { name: 'Portfolio' })).toBeInTheDocument()
   })
 
+  it('renders the Learn page at /app/learn', () => {
+    renderAt('/app/learn')
+    expect(screen.getByRole('heading', { name: 'Learn' })).toBeInTheDocument()
+  })
+
   it('shows the cookie consent banner on first visit', () => {
     renderAt('/')
     expect(screen.getByRole('button', { name: /^accept$/i })).toBeInTheDocument()

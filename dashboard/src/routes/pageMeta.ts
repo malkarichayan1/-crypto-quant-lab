@@ -37,6 +37,11 @@ export const APP_PAGE_META: PageMetaEntry[] = [
     description: 'Recent crypto market news, fetched and cached for you.',
   },
   {
+    pattern: '/app/learn',
+    title: 'Learn — HedgeFund Simulator',
+    description: 'Short, plain-English lessons on how the simulator works and the basics of trading.',
+  },
+  {
     pattern: '/app/settings',
     title: 'Settings — HedgeFund Simulator',
     description: 'Manage your AI advisor preference and reset your simulated portfolio.',
